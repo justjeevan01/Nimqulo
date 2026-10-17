@@ -13,6 +13,7 @@ Retain Expo SDK 58, React Native 0.88, Expo Router native tabs, NativeWind, Cler
 - Configure Nimqulo branding, an Android application identifier, authentication redirects, notification configuration, and EAS development/preview APK profiles. Keep signing credentials outside the repository.
 - Use native **Chats**, **People**, and **Settings** tabs. Open conversations, group details, profiles, invitations, and moderation screens through stack routes.
 - Provide Google sign-in, username/display-name setup, optional profile-photo upload, returning-user session restoration, and clear access-denied states.
+- After each fresh sign-in, route admin-approved users immediately to profile setup and unapproved users to Access Required. Require the explicit admin-owned approval flag; completing a profile must never grant approval. The current frontend uses Clerk Public metadata `approved: true` until the backend approval service is implemented.
 - Use Clerk for profile-image upload and identity. Store application usernames and display names in Neon. Usernames are case-insensitive, unique, 3–24 characters, using letters, numbers, and underscores; keep them immutable during the pilot.
 - Support light/dark appearance, screen-reader labels, scalable text, accessible touch targets, keyboard handling, loading states, and empty/error states.
 

@@ -1,17 +1,7 @@
-import { Text, View, StyleSheet } from "react-native";
+import { AuthScreen } from "@/components/auth/auth-screen";
+import { useGoogleSignIn } from "@/hooks/use-google-sign-in";
 
-export default function Index() {
-  return (
-    <View style={styles.container}>
-      <Text>Edit src/app/index.tsx to edit this screen.</Text>
-    </View>
-  );
+export default function SignInRoute() {
+  const { signIn, isReady, isSigningIn, error } = useGoogleSignIn();
+  return <AuthScreen onGoogleSignIn={signIn} isReady={isReady} isSigningIn={isSigningIn} error={error} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

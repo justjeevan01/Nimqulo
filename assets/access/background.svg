@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="778" viewBox="0 0 390 778">
+  <defs>
+    <linearGradient id="base" x1="0%" y1="0%" x2="100%" y2="100%"><stop stop-color="#020D1B"/><stop offset=".6" stop-color="#000A18"/><stop offset="1" stop-color="#020A14"/></linearGradient>
+    <radialGradient id="top" cx="100%" cy="30%" r="100%"><stop stop-color="#002C79"/><stop offset=".55" stop-color="#000D22"/><stop offset="1" stop-color="#020B18"/></radialGradient>
+    <linearGradient id="left" x1="0%" y1="0%" x2="80%" y2="80%"><stop stop-color="#001D53"/><stop offset=".4" stop-color="#000C21"/><stop offset="1" stop-color="#010B19"/></linearGradient>
+    <radialGradient id="bottom" gradientUnits="userSpaceOnUse" cx="390" cy="465" r="100"><stop stop-color="#003080"/><stop offset=".3" stop-color="#001D50" stop-opacity=".65"/><stop offset=".7" stop-color="#000B1B" stop-opacity=".15"/><stop offset="1" stop-color="#000A18" stop-opacity="0"/></radialGradient>
+  </defs>
+  <path fill="url(#base)" d="M0 0h390v778H0z"/>
+  <path fill="url(#top)" d="M0 0h390v70C305 104 317 143 250 183 172 231 88 246 0 263Z"/>
+  <path d="M390 70C305 104 317 143 250 183" fill="none" stroke="#0755BF" stroke-width=".4"/>
+  <path fill="url(#left)" d="M0 268C89 289 102 359 158 399 225 449 321 453 390 468v310H0Z"/>
+  <path d="M0 268C89 289 102 359 158 399" fill="none" stroke="#074192" stroke-width=".4"/>
+  <path fill="url(#bottom)" d="M0 414C139 433 278 441 390 412v57C364 502 310 517 255 560 163 630 161 724 0 741Z"/>
+  <path fill="url(#base)" d="M0 741C161 724 163 630 255 560 310 517 364 502 390 469v309H0Z"/>
+  <path d="M0 741C161 724 163 630 255 560 310 517 364 502 390 469" fill="none" stroke="#0647AA" stroke-width=".5"/>
+</svg>
+

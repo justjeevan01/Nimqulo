@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <defs>
+    <radialGradient id="halo"><stop stop-color="#FB324A" stop-opacity=".42"/><stop offset=".65" stop-color="#E22D59" stop-opacity=".12"/><stop offset="1" stop-color="#E22D59" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glass"><stop stop-color="#5C2034" stop-opacity=".6"/><stop offset=".7" stop-color="#67374E" stop-opacity=".45"/><stop offset="1" stop-color="#656078" stop-opacity=".38"/></radialGradient>
+    <linearGradient id="pink" x1="0%" y1="0%" x2="70%" y2="100%"><stop stop-color="#FFC7CE"/><stop offset=".32" stop-color="#FF8F9F"/><stop offset="1" stop-color="#FC5265"/></linearGradient>
+    <linearGradient id="body" x1="0%" y1="0%" x2="60%" y2="100%"><stop stop-color="#FF9DAA"/><stop offset=".4" stop-color="#FF7F8E"/><stop offset="1" stop-color="#FD4A5D"/></linearGradient>
+  </defs>
+  <circle cx="96" cy="96" r="96" fill="url(#halo)"/>
+  <circle cx="96" cy="96" r="77.5" fill="url(#glass)" stroke="#D87C9A" stroke-opacity=".48" stroke-width=".65"/>
+  <ellipse cx="96" cy="96" rx="49" ry="52" fill="url(#halo)"/>
+  <path d="M76 81V75a20 20 0 0 1 40 0v6" fill="none" stroke="url(#pink)" stroke-width="8"/>
+  <path d="M72 79H120a8 8 0 0 1 8 8v35a9 9 0 0 1-9 9H73a9 9 0 0 1-9-9V87a8 8 0 0 1 8-8Z" fill="url(#body)" stroke="#FFBAC5" stroke-width=".65"/>
+  <path d="M103.3 101.1a7.3 7.3 0 1 0-11.5 6l-.8 7.2c-.5 4.3 8.5 4.3 8 0l-.8-7.2a7.2 7.2 0 0 0 5.1-6Z" fill="#FFDBDF" stroke="#FFF0F1" stroke-width=".5"/>
+</svg>
+
