@@ -12,12 +12,12 @@ import { attachmentIcon, backIcon, headerFill, incomingFill, messageBackdrop, mo
 
 export type DirectMessage = { id: string; text: string; outgoing?: boolean; time: string; image?: ImageProps["source"]; failed?: boolean; bubbleWidth?: number; sender?: Person; system?: boolean };
 export type MessageDraft = { text: string; image?: ImageProps["source"] };
-type Props = { peer: { name: string; username?: string; avatar?: ImageProps["source"] }; initialMessages?: readonly DirectMessage[]; onBack: () => void; onSend?: (draft: MessageDraft) => Promise<void>; groupMode?: boolean; memberCount?: number; members?: readonly Person[]; onViewMember?: (person: Person) => void };
+type Props = { peer: { name: string; username?: string; avatar?: ImageProps["source"] }; initialMessages?: readonly DirectMessage[]; onBack: () => void; onSend?: (draft: MessageDraft) => Promise<void>; groupMode?: boolean; memberCount?: number; members?: readonly Person[]; onViewMember?: (person: Person) => void; onOpenDetails?:()=>void };
 const subscribe = () => () => {};
 const clientSnapshot = () => true;
 const serverSnapshot = () => false;
 
-export function DirectMessageScreen({ peer, initialMessages = [], onBack, onSend, groupMode = false, memberCount, members = [], onViewMember }: Props) {
+export function DirectMessageScreen({ peer, initialMessages = [], onBack, onSend, groupMode = false, memberCount, members = [], onViewMember, onOpenDetails }: Props) {
   const { width, fontScale } = useWindowDimensions();
   const s = Math.min(width, 480) / 390;
   const insets = useSafeAreaInsets();
@@ -91,7 +91,7 @@ export function DirectMessageScreen({ peer, initialMessages = [], onBack, onSend
           <Pressable accessibilityRole="button" accessibilityLabel="Back to chats" onPress={onBack} style={[styles.iconButton, { width: 38 * s }]}><Image source={backIcon} style={{ width: 26 * s, height: 26 * s }} accessible={false} /></Pressable>
           {peer.avatar ? <Image source={peer.avatar} contentFit="cover" style={{ width: 55 * s, height: 55 * s, borderRadius: 30 * s, borderWidth: 1, borderColor: "#5685B3" }} accessibilityLabel={`${peer.name}'s profile photo`} /> : <View style={[styles.avatar, { width: 55 * s, height: 55 * s }]}><Text style={{ fontFamily, fontSize: 24 * s, color: "#CBDCFA" }}>{peer.name.slice(0, 1)}</Text></View>}
           <View style={{ flex: 1, marginLeft: 9 * s, gap: 3 * s }}><Text accessibilityRole="header" numberOfLines={1} style={{ fontFamily, fontSize: 19 * s, lineHeight: 25 * s, fontWeight: "600", color: "#F8F9FF", letterSpacing: -.3 * s }}>{peer.name}</Text>{(!!peer.username || groupMode) && <Text numberOfLines={1} style={{ fontFamily, fontSize: 13 * s, lineHeight: 18 * s, color: "#91A8D0" }}>{groupMode ? (memberCount === undefined ? "Group" : `${memberCount} members`) : `@${peer.username}`}</Text>}</View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Conversation options" onPress={() => setDetails(true)} style={styles.iconButton}><Image source={moreIcon} style={{ width: 24 * s, height: 24 * s }} accessible={false} /></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Conversation options" onPress={() => { if(onOpenDetails)onOpenDetails();else setDetails(true); }} style={styles.iconButton}><Image source={moreIcon} style={{ width: 24 * s, height: 24 * s }} accessible={false} /></Pressable>
         </View>
       </View>
       <FlatList ref={list} data={messages} keyExtractor={item => item.id} style={styles.history} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={[styles.messages, { paddingTop: 9 * s, paddingBottom: 8 * s, paddingLeft: 17 * s, paddingRight: 13 * s, gap: 5 * s }]}

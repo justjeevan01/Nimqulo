@@ -5,15 +5,16 @@ import { FlatList, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { backdrop, blueFill, bubbleFill, inboxIcon, panelFill, searchIcon } from "./chat-art";
 import { chatFonts } from "./chat-fonts";
+import { CreateGroupButton } from "./create-group-button";
 
 export type Conversation = { id: string; title: string; message: string; time?: string; kind: "direct" | "group"; unread?: number; avatar: ImageProps["source"] };
-type Props = { conversations: readonly Conversation[]; onFindPeople: () => void; onOpenConversation: (conversation: Conversation) => void };
+type Props = { conversations: readonly Conversation[]; onFindPeople: () => void; onCreateGroup?:()=>void; onOpenConversation: (conversation: Conversation) => void };
 const subscribe = () => () => {};
 const clientSnapshot = () => true;
 const serverSnapshot = () => false;
 const filters = ["All", "Direct", "Groups"] as const;
 
-export function ChatHomeScreen({ conversations, onFindPeople, onOpenConversation }: Props) {
+export function ChatHomeScreen({ conversations, onFindPeople, onCreateGroup, onOpenConversation }: Props) {
   const { width, fontScale } = useWindowDimensions();
   const s = Math.min(width, 480) / 390;
   const insets = useSafeAreaInsets();
@@ -44,6 +45,7 @@ export function ChatHomeScreen({ conversations, onFindPeople, onOpenConversation
           <Text style={[text(14, "600"), { color: filter === name ? "white" : "#C2D1F6" }]}>{name}</Text>
         </Pressable>)}
       </View>
+      {filter === "Groups" && <View style={{alignItems:"flex-end",marginBottom:12*s}}><CreateGroupButton s={s} onPress={onCreateGroup} fontFamily={loaded ? "InterChats" : undefined}/></View>}
     </View>
     <FlatList data={results} keyExtractor={item => item.id} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={results.length ? { paddingHorizontal: 8 * s, paddingBottom: 22 * s, gap: 4 * s } : { flexGrow: 1 }}
       renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.title}, ${item.message}${item.unread ? `, ${item.unread} unread messages` : ""}`} onPress={() => onOpenConversation(item)} style={({ pressed }) => [{ height: fontScale > 1.2 ? undefined : 82.5 * s, minHeight: 82.5 * s, borderRadius: 17 * s, borderWidth: 1, borderColor: "#0D2034", opacity: pressed ? .75 : 1, backgroundColor: "#071320", overflow: "hidden", paddingHorizontal: 13 * s, paddingVertical: 11 * s, flexDirection: "row", alignItems: "center", gap: 21 * s }]}>

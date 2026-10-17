@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, type PropsWithChildren } from "react";
+import { groupContacts } from "./community-fixtures";
 import type { Person, ConnectionRequest } from "@/components/social/types";
 export const samplePeople: readonly Person[]=__DEV__?[
  {id:"alex",name:"Alex Carter",username:"alexcarter",avatar:require("../../assets/social/people-alex.png"),sharedGroups:3,connected:true},
@@ -17,7 +18,7 @@ const initialRequests:readonly ConnectionRequest[]=__DEV__?[
 ]:[];
 export const searchPerson:Person=__DEV__?{id:"casey",name:"Casey Morgan",username:"caseymorgan",avatar:require("../../assets/social/search-alex.png"),connected:false}:{id:"",name:"",username:""};
 export function usePreviewState(){
- const [people,setPeople]=useState<readonly Person[]>([...samplePeople.map(person=>initialRequests.some(request=>request.person.username===person.username)?{...person,connected:false}:person),...(__DEV__?[searchPerson]:[]),...initialRequests.filter(request=>!samplePeople.some(person=>person.id===request.person.id)).map(request=>({...request.person,connected:false}))]);const [requests,setRequests]=useState(initialRequests);const [requested,setRequested]=useState<string[]>(initialRequests.filter(request=>request.direction==="outgoing").map(request=>request.person.username));
+ const [people,setPeople]=useState<readonly Person[]>([...samplePeople.map(person=>initialRequests.some(request=>request.person.username===person.username)?{...person,connected:false}:person),...(__DEV__?[searchPerson,{...groupContacts[5],connected:false}]:[]),...initialRequests.filter(request=>!samplePeople.some(person=>person.id===request.person.id)).map(request=>({...request.person,connected:false}))]);const [requests,setRequests]=useState(initialRequests);const [requested,setRequested]=useState<string[]>(initialRequests.filter(request=>request.direction==="outgoing").map(request=>request.person.username));
  const [reports,setReports]=useState<{personId:string;reason:string}[]>([]);
  function report(personId:string,reason:string):boolean{if(!people.some(person=>person.id===personId)||!reason.trim())return false;setReports(current=>[...current,{personId,reason}]);return true;}
  function connect(person:Person){if(requested.includes(person.username)||people.some(existing=>existing.username===person.username&&existing.connected))return;setRequested(current=>[...current,person.username]);setRequests(current=>[...current,{id:`out-${person.username}`,person,age:"Now",direction:"outgoing"}]);}

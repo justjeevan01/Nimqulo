@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ClerkProvider, useAuth, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
@@ -12,10 +12,14 @@ WebBrowser.maybeCompleteAuthSession();
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 function AuthNavigator() {
+  const pathname = usePathname();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const { user, isLoaded: userLoaded } = useUser();
+  const isDesignPreview = __DEV__ && (pathname === "/design-preview" || pathname.startsWith("/design-preview/"));
+  const isStatusScreen = ["/offline", "/account-suspended", "/concurrent-session"].includes(pathname);
+  // Status pages contain no account data and must render even while Clerk is offline.
   // Resolve both identity and admin approval before mounting any protected screen.
-  if (!authLoaded || !userLoaded) return <View style={{ flex: 1, backgroundColor: "#020B18", alignItems: "center", justifyContent: "center" }}><ActivityIndicator color="#008BFF" /></View>;
+  if ((!authLoaded || !userLoaded) && !isDesignPreview && !isStatusScreen) return <View style={{ flex: 1, backgroundColor: "#020B18", alignItems: "center", justifyContent: "center" }}><ActivityIndicator color="#008BFF" /></View>;
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#020B18" } }}>
       <Stack.Protected guard={!isSignedIn}>
