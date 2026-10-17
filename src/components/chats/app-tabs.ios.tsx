@@ -1,0 +1,32 @@
+import { DarkTheme, ThemeProvider } from "expo-router";
+import { NativeTabs } from "expo-router/native-tabs";
+
+// iOS owns the native tab bar, including Liquid Glass on iOS 26+.
+export function AppTabs({ chatsRoute = "home" }: { chatsRoute?: "home" | "chats" }) {
+  return <ThemeProvider value={DarkTheme}>
+    <NativeTabs
+      backBehavior="initialRoute"
+      backgroundColor="#04101E"
+      tintColor="#0873FF"
+      iconColor={{ default: "#99ADD5", selected: "#0873FF" }}
+      labelStyle={{ default: { color: "#99ADD5" }, selected: { color: "#0873FF" } }}
+      indicatorColor="#102F58"
+      labelVisibilityMode="labeled"
+      disableTransparentOnScrollEdge
+      minimizeBehavior="never"
+    >
+      <NativeTabs.Trigger name={chatsRoute} contentStyle={{ backgroundColor: "#020B18" }} disableAutomaticContentInsets>
+        <NativeTabs.Trigger.Icon sf={{ default: "bubble.left", selected: "bubble.left.fill" }} md="chat_bubble" />
+        <NativeTabs.Trigger.Label>Chats</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="people" contentStyle={{ backgroundColor: "#020B18" }} disableAutomaticContentInsets>
+        <NativeTabs.Trigger.Icon sf={{ default: "person", selected: "person.fill" }} md="person" />
+        <NativeTabs.Trigger.Label>People</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="settings" contentStyle={{ backgroundColor: "#020B18" }} disableAutomaticContentInsets>
+        <NativeTabs.Trigger.Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} md="settings" />
+        <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
+  </ThemeProvider>;
+}
