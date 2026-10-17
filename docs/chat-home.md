@@ -8,16 +8,15 @@ Android and web content reserve space above the floating bar, keeping list rows 
 
 Approval is checked at the shared tabs layout, so direct links to all three tabs remain protected. Every fresh sign-in still starts at Profile Setup for approved users; Confirm opens Chats Home without saving profile data. Unapproved users still see Access Required. iOS tab screens use the `react-native-screens/experimental` bottom safe-area wrapper with automatic tab content insets disabled, ensuring list content and the new-conversation action stay above the system bar without doubled insets. The chat screen continues to handle the top safe area. FlatList's automatic native-tab scroll-to-top/minimization integration is not enabled; the bar remains visible and nontransparent on scroll edges where the platform supports that setting.
 
-The reusable chat screen accepts conversation data and callbacks. It supports case-insensitive search by name or latest message, All/Direct/Groups filters, unread counts, scrolling, and an empty search result. Search in the header focuses the search field. Find People and the new-conversation button open the People tab. Settings retains account details, Edit profile, and Sign out.
+The reusable chat screen accepts conversation data and callbacks. It supports case-insensitive search by name or latest message, All/Direct/Groups filters, unread counts, scrolling, and an empty search result. The search field starts hidden. Tapping the header search icon reveals and focuses it; tapping again hides it and clears the query. The Chats heading and search control share a vertically centered header row. Find People and the new-conversation button open the People tab. Settings retains account details, Edit profile, and Sign out.
 
 There is no conversation service or people-discovery API yet. Real accounts receive an empty conversation list. People currently explains that connections will appear when discovery is available. No messages are sent or fabricated for real accounts.
 
-Development previews:
+Development UI preview: `/design-preview/chats`.
 
-- `/design-preview/chats?state=empty`
-- `/design-preview/chats?state=full`
+Home is one data-driven screen. The development preview uses the same five placeholder conversations on every visit, including after tab switches, profile setup, and returning from a conversation. It has no full/empty URL modes; older `state` query parameters are ignored. The supplied empty reference is the list's empty state when conversation data is empty, not a separate route. The plus button remains available for the populated list regardless of the selected filter or search results.
 
-Both previews use the same AppTabs navigator as the signed-in app, including native tabs on iOS and the floating glass bar on Android/web. People and Settings are separate preview routes. The populated preview contains five reference conversations and portraits cropped from the supplied design. Tapping a row opens a clearly marked sample preview. These fixtures never read or write account data, and the route redirects to `/` in production.
+The preview uses the same AppTabs navigator as the signed-in app, including native tabs on iOS and the floating glass bar on Android/web. People and Settings are separate preview routes. Placeholder portraits are cropped from the supplied design. Direct and group rows open their respective development conversation screens. These fixtures never read or write account data, and the preview redirects to `/` in production.
 
 The layout is scaled from the phone reference and centered at a maximum width of 480 on web. The supplied phone frame, status icons, and home indicator are device chrome and are not drawn into the application. Native safe-area insets are respected. Lists remain scrollable on smaller phones and when larger system text is enabled.
 

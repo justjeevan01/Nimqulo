@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { ChatHomeScreen, type Conversation } from "@/components/chats/chat-home-screen";
 import { TabContent } from "@/components/chats/tab-content";
 
@@ -11,9 +11,8 @@ const samples: readonly Conversation[] = __DEV__ ? [
 ] : [];
 
 export default function ChatsPreviewRoute() {
-  const { state } = useLocalSearchParams<{ state?: string }>();
   return <TabContent>
-    <ChatHomeScreen conversations={state === "full" ? samples : []} onFindPeople={() => router.navigate("/design-preview/people")} onOpenConversation={conversation => {
+    <ChatHomeScreen conversations={samples} onFindPeople={() => router.navigate("/design-preview/people")} onOpenConversation={conversation => {
       if (conversation.kind === "direct") router.push({ pathname: "/design-preview/direct-message", params: conversation.id === "teyler" ? {} : { name: conversation.title, username: conversation.title.toLowerCase().replace(/\s/g, "") } });
       else router.push({ pathname: "/design-preview/group-chat", params: { name: conversation.title } });
     }} />

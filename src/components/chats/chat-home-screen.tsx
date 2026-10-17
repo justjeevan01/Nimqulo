@@ -1,6 +1,6 @@
 import { useFonts } from "expo-font";
 import { Image, type ImageProps } from "expo-image";
-import { type ComponentRef, useRef, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { FlatList, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { backdrop, blueFill, bubbleFill, inboxIcon, panelFill, searchIcon } from "./chat-art";
@@ -20,8 +20,8 @@ export function ChatHomeScreen({ conversations, onFindPeople, onOpenConversation
   const [loaded, fontError] = useFonts(chatFonts);
   const mounted = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot);
   const [query, setQuery] = useState("");
+  const [searchVisible, setSearchVisible] = useState(false);
   const [filter, setFilter] = useState<typeof filters[number]>("All");
-  const input = useRef<ComponentRef<typeof TextInput>>(null);
   const results = conversations.filter(item => (filter === "All" || item.kind === (filter === "Direct" ? "direct" : "group")) && `${item.title} ${item.message}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const text = (size: number, weight: "400" | "500" | "600" | "700" = "400") => ({ fontFamily: loaded ? "InterChats" : undefined, fontSize: size * s, fontWeight: weight });
   if (!mounted || (!loaded && !fontError)) return <View style={styles.outer} />;
@@ -29,15 +29,15 @@ export function ChatHomeScreen({ conversations, onFindPeople, onOpenConversation
   return <View style={styles.outer}><View style={styles.canvas}>
     <Image source={backdrop} style={[StyleSheet.absoluteFill, { height: 801 * s }]} contentFit="fill" accessible={false} />
     <View style={{ paddingTop: Math.max(insets.top + 12 * s, 62 * s), paddingHorizontal: 16 * s }}>
-      <View style={{ height: 45 * s, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 * s }}>
-        <Text accessibilityRole="header" style={[text(38.5, "700"), { color: "#FAFAFC", letterSpacing: -1.2 * s, marginLeft: 3 * s }]}>Chats</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Search chats" onPress={() => input.current?.focus()} style={({ pressed }) => [{ width: 45 * s, height: 45 * s, borderRadius: 24 * s, alignItems: "center", justifyContent: "center", backgroundColor: "#09172A", borderWidth: 1, borderColor: "#152C4B", opacity: pressed ? .65 : 1 }]}><Image source={searchIcon} style={{ width: 20 * s, height: 20 * s }} accessible={false} /></Pressable>
+      <View style={{ minHeight: 45 * s, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 * s }}>
+        <Text accessibilityRole="header" style={[text(38.5, "700"), { color: "#FAFAFC", letterSpacing: -1.2 * s, marginLeft: 3 * s, lineHeight: 45 * s, includeFontPadding: false, textAlignVertical: "center" }]}>Chats</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Search chats" accessibilityState={{ expanded: searchVisible }} onPress={() => { if (searchVisible) setQuery(""); setSearchVisible(visible => !visible); }} style={({ pressed }) => [{ width: 45 * s, height: 45 * s, minWidth: 44, minHeight: 44, borderRadius: 24 * s, alignItems: "center", justifyContent: "center", backgroundColor: "#09172A", borderWidth: 1, borderColor: "#152C4B", opacity: pressed ? .65 : 1 }]}><Image source={searchIcon} style={{ width: 20 * s, height: 20 * s }} accessible={false} /></Pressable>
       </View>
-      <View style={{ flexDirection: "row", alignItems: "center", height: 54 * s, minHeight: 48, borderWidth: 1, borderColor: "#1C3454", backgroundColor: "#091523", borderRadius: 23 * s, paddingHorizontal: 18 * s }}>
+      {searchVisible && <View style={{ flexDirection: "row", alignItems: "center", height: 54 * s, minHeight: 48, borderWidth: 1, borderColor: "#1C3454", backgroundColor: "#091523", borderRadius: 23 * s, paddingHorizontal: 18 * s }}>
         <Image source={searchIcon} style={{ width: 21 * s, height: 21 * s, marginRight: 14 * s }} accessible={false} />
-        <TextInput ref={input} accessibilityLabel="Search conversations" value={query} onChangeText={setQuery} placeholder="Search conversations..." placeholderTextColor="#8299C5" autoCorrect={false} returnKeyType="search" style={[text(16), { flex: 1, height: "100%", color: "#DCE7FF", outlineWidth: 0, padding: 0 }]} />
+        <TextInput autoFocus accessibilityLabel="Search conversations" value={query} onChangeText={setQuery} placeholder="Search conversations..." placeholderTextColor="#8299C5" autoCorrect={false} returnKeyType="search" style={[text(16), { flex: 1, height: "100%", color: "#DCE7FF", outlineWidth: 0, padding: 0 }]} />
         {query.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setQuery("")} hitSlop={10}><Text style={[text(23), { color: "#A8BBE3" }]}>×</Text></Pressable>}
-      </View>
+      </View>}
       <View style={{ flexDirection: "row", gap: 7 * s, marginTop: 15 * s, marginBottom: 15 * s }}>
         {filters.map(name => <Pressable key={name} accessibilityRole="button" accessibilityState={{ selected: filter === name }} onPress={() => setFilter(name)} style={({ pressed }) => [{ flex: name === "All" ? 112 : name === "Direct" ? 115 : 117, height: 42 * s, minHeight: 42, borderRadius: 18 * s, borderWidth: 1, borderColor: filter === name ? "#269CFF" : "#132B48", overflow: "hidden", backgroundColor: "#091626", alignItems: "center", justifyContent: "center", opacity: pressed ? .75 : 1 }]}>
           {filter === name && <Image source={blueFill} style={StyleSheet.absoluteFill} contentFit="fill" accessible={false} />}

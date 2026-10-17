@@ -3,8 +3,8 @@ import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { Action, Avatar, icons, Panel, RoundButton, SocialCanvas, type, ui, useSocialLayout } from "./social-ui";
 import type { Person } from "./types";
-type Props={person:Person;available?:boolean;groups?:readonly string[];onBack:()=>void;onMessage?:()=>void;onConnect?:()=>void;onRemove?:()=>void;onBlock?:()=>void;onOpenGroup?:(name:string)=>void};
-export function UserProfileScreen({person,available=false,groups=[],onBack,onMessage,onConnect,onRemove,onBlock,onOpenGroup}:Props){
+type Props={person:Person;available?:boolean;groups?:readonly string[];onBack:()=>void;onMessage?:()=>void;onConnect?:()=>void;onRemove?:()=>void;onBlock?:()=>void;onReport?:(reason:string)=>boolean;onOpenGroup?:(name:string)=>void};
+export function UserProfileScreen({person,available=false,groups=[],onBack,onMessage,onConnect,onRemove,onBlock,onReport,onOpenGroup}:Props){
  const l=useSocialLayout();const {s}=l;const [sheet,setSheet]=useState<"groups"|"remove"|"block"|"report"|"options"|undefined>();const [reason,setReason]=useState("Spam or scam");const [reported,setReported]=useState(false);
  if(!l.ready)return <View style={ui.root}/>;
  const rows:[keyof typeof icons,string,()=>void][]=[["people",`${person.sharedGroups||0} shared groups`,()=>setSheet("groups")],["remove","Remove connection",()=>setSheet("remove")],["block",person.blocked?"Unblock user":"Block user",()=>setSheet("block")],["flag","Report user",()=>{setReported(false);setSheet("report");}]];
@@ -21,7 +21,7 @@ export function UserProfileScreen({person,available=false,groups=[],onBack,onMes
   {sheet==="groups"&&groups.map(name=><Action key={name} l={l} label={name} onPress={()=>{setSheet(undefined);onOpenGroup?.(name);}}/>)}
   {sheet==="options"&&<><Action l={l} label="Shared groups" onPress={()=>setSheet("groups")}/><Action l={l} label="Report user" danger onPress={()=>{setReported(false);setSheet("report");}} disabled={!available}/></>}
   {(sheet==="remove"||sheet==="block")&&<><Text style={type(l,16,"400","#AEC4E9")}>{sheet==="remove"?`Remove ${person.name} from your connections?`:`${person.blocked?"Unblock":"Block"} ${person.name}?`}</Text><Action l={l} label="Confirm" danger onPress={()=>{if(sheet==="remove")onRemove?.();else onBlock?.();setSheet(undefined);}} disabled={!available}/></>}
-  {sheet==="report"&&(reported?<Text style={type(l,16,"400","#AEC4E9")}>Report saved for this preview.</Text>:<>{["Spam or scam","Harassment","Other"].map(value=><Pressable key={value} accessibilityRole="radio" accessibilityLabel={value} accessibilityState={{checked:reason===value}} onPress={()=>setReason(value)} style={{paddingVertical:8,flexDirection:"row",gap:12}}><Text style={type(l,17,"400","#A9C6FF")}>{reason===value?"\u25C9":"\u25CB"}</Text><Text style={type(l,16)}>{value}</Text></Pressable>)}<Action l={l} label="Save report" blue onPress={()=>setReported(true)} disabled={!available}/></>)}
+  {sheet==="report"&&(reported?<Text style={type(l,16,"400","#AEC4E9")}>Report saved for this preview.</Text>:<>{["Spam or scam","Harassment","Other"].map(value=><Pressable key={value} accessibilityRole="radio" accessibilityLabel={value} accessibilityState={{checked:reason===value}} onPress={()=>setReason(value)} style={{paddingVertical:8,flexDirection:"row",gap:12}}><Text style={type(l,17,"400","#A9C6FF")}>{reason===value?"\u25C9":"\u25CB"}</Text><Text style={type(l,16)}>{value}</Text></Pressable>)}<Action l={l} label="Save report" blue onPress={()=>{if(onReport?.(reason)===true)setReported(true);}} disabled={!available}/></>)}
   <Action l={l} label="Close" onPress={()=>setSheet(undefined)}/>
  </Panel></View></Modal>
  </SocialCanvas>;

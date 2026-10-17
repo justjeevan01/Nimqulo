@@ -46,7 +46,8 @@
     "android": "node --dns-result-order=ipv4first ./node_modules/expo/bin/cli start --dev-client --localhost --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "node --experimental-strip-types --test tests/access.test.cjs tests/svg.test.cjs"
   },
   "private": true
 }

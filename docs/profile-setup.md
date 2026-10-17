@@ -6,6 +6,6 @@ This screen is temporarily UI-only. Display name and username are empty, read-on
 
 **Confirm** immediately replaces this route with `/home`, showing Chats Home. The shared tabs layout checks approval without requiring a saved profile. Back returns to the previous screen when available, or signs out when setup is the first screen.
 
-The development-only `/design-preview/profile-setup` route uses the same placeholders and opens the empty chat preview on Confirm, without reading or writing a Clerk account. Production builds redirect this preview route to `/`.
+The development-only `/design-preview/profile-setup` route uses the same placeholders and opens the shared chat Home preview on Confirm, without reading or writing a Clerk account. Production builds redirect this preview route to `/`.
 
 Validate with `npx expo lint`, `npx tsc --noEmit`, and the browser flow check in ignored `visual-review/profile-check.cjs`. These JavaScript-only changes load through Metro without rebuilding the Android APK.

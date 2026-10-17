@@ -12,5 +12,5 @@ const sampleMessages: readonly DirectMessage[] = __DEV__ ? [
 export default function DirectMessagePreview() {
   const { name, username } = useLocalSearchParams<{ name?: string; username?: string }>();
   if (!__DEV__) return <Redirect href="/" />;
-  return <DirectMessageScreen peer={{ name: name || "Taylor Kim", username: username || "taylorkim", avatar: require("../../../assets/messages/preview-taylor.png") }} initialMessages={sampleMessages} onBack={() => router.dismissTo("/design-preview/chats?state=full")} onSend={async () => { throw new Error("Preview messages are not delivered."); }} />;
+  return <DirectMessageScreen peer={{ name: name || "Taylor Kim", username: username || "taylorkim", avatar: require("../../../assets/messages/preview-taylor.png") }} initialMessages={sampleMessages} onBack={() => router.dismissTo("/design-preview/chats")} onSend={async () => { throw new Error("Preview messages are not delivered."); }} />;
 }

@@ -15,15 +15,17 @@ const initialRequests:readonly ConnectionRequest[]=__DEV__?[
  {id:"out-chris",person:{...by("chris"),avatar:require("../../assets/social/request-chris.png")},age:"2d",direction:"outgoing"},
  {id:"out-daniel",person:{id:"daniel",name:"Daniel Kim",username:"danielkim",avatar:require("../../assets/social/request-daniel.png")},age:"3d",direction:"outgoing"},
 ]:[];
-export const searchPerson:Person=__DEV__?{...by("alex"),avatar:require("../../assets/social/search-alex.png"),connected:false}:{id:"",name:"",username:""};
+export const searchPerson:Person=__DEV__?{id:"casey",name:"Casey Morgan",username:"caseymorgan",avatar:require("../../assets/social/search-alex.png"),connected:false}:{id:"",name:"",username:""};
 export function usePreviewState(){
- const [people,setPeople]=useState<readonly Person[]>([...samplePeople,...initialRequests.filter(request=>!samplePeople.some(person=>person.id===request.person.id)).map(request=>({...request.person,connected:false}))]);const [requests,setRequests]=useState(initialRequests);const [requested,setRequested]=useState<string[]>(initialRequests.filter(request=>request.direction==="outgoing").map(request=>request.person.username));
- function connect(person:Person){if(requested.includes(person.username))return;setRequested(current=>[...current,person.username]);setRequests(current=>[...current,{id:`out-${person.username}`,person,age:"Now",direction:"outgoing"}]);}
+ const [people,setPeople]=useState<readonly Person[]>([...samplePeople.map(person=>initialRequests.some(request=>request.person.username===person.username)?{...person,connected:false}:person),...(__DEV__?[searchPerson]:[]),...initialRequests.filter(request=>!samplePeople.some(person=>person.id===request.person.id)).map(request=>({...request.person,connected:false}))]);const [requests,setRequests]=useState(initialRequests);const [requested,setRequested]=useState<string[]>(initialRequests.filter(request=>request.direction==="outgoing").map(request=>request.person.username));
+ const [reports,setReports]=useState<{personId:string;reason:string}[]>([]);
+ function report(personId:string,reason:string):boolean{if(!people.some(person=>person.id===personId)||!reason.trim())return false;setReports(current=>[...current,{personId,reason}]);return true;}
+ function connect(person:Person){if(requested.includes(person.username)||people.some(existing=>existing.username===person.username&&existing.connected))return;setRequested(current=>[...current,person.username]);setRequests(current=>[...current,{id:`out-${person.username}`,person,age:"Now",direction:"outgoing"}]);}
  function accept(id:string){const request=requests.find(item=>item.id===id);if(request){setPeople(current=>current.some(p=>p.username===request.person.username)?current.map(person=>person.username===request.person.username?{...person,connected:true}:person):[...current,{...request.person,connected:true}]);}setRequests(current=>current.filter(item=>item.id!==id));}
  function dismiss(id:string){const request=requests.find(item=>item.id===id);if(request?.direction==="outgoing")setRequested(current=>current.filter(name=>name!==request.person.username));setRequests(current=>current.filter(item=>item.id!==id));}
  function remove(id:string){setPeople(current=>current.map(p=>p.id===id?{...p,connected:false}:p));}
  function block(id:string){setPeople(current=>current.map(p=>p.id===id?{...p,blocked:!p.blocked,connected:false}:p));}
- return {people,requests,requested,connect,accept,dismiss,remove,block};
+ return {people,requests,requested,reports,report,connect,accept,dismiss,remove,block};
 }
 const PreviewContext=createContext<ReturnType<typeof usePreviewState>|null>(null);
 export function SocialPreviewProvider({children}:PropsWithChildren){const state=usePreviewState();return <PreviewContext value={state}>{children}</PreviewContext>;}

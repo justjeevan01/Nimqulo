@@ -23,16 +23,16 @@ export function GroupMessage({ message, s, fontFamily, fontScale, onProfile, ren
 
   // Reference-specific narrow widths must not shrink the group's message contents.
   const content = <>
-    <MessageBubble message={{ ...message, bubbleWidth: undefined }} s={s} fontFamily={fontFamily} fontScale={fontScale} maxWidth={message.outgoing ? undefined : "100%"} renderPhoto={renderPhoto}/>
+    <MessageBubble message={{ ...message, bubbleWidth: undefined }} s={s} fontFamily={fontFamily} fontScale={fontScale} maxWidth="100%" renderPhoto={renderPhoto}/>
     <MessageTime time={message.time} outgoing={message.outgoing} s={s} fontFamily={fontFamily}/>
   </>;
-  if (message.outgoing) return <View style={{ alignItems: "flex-end" }}>{content}</View>;
+  if (message.outgoing) return <View style={{ alignItems: "flex-end", paddingLeft: 48 * s }}>{content}</View>;
 
   return <View style={{ flexDirection: "row", gap: 12 * s }}>
     {message.sender && <Pressable accessibilityRole="button" accessibilityLabel={`View ${message.sender.name}'s profile`} onPress={() => message.sender && onProfile?.(message.sender)} style={{ paddingTop: 21 * s }}>
-      <Avatar person={message.sender} size={40 * s}/>
+      <Avatar person={message.sender} size={36 * s}/>
     </Pressable>}
-    <View style={{ flex: 1, alignItems: "flex-start" }}>
+    <View style={{ flex: 1, alignItems: "flex-start", paddingRight: 20 * s }}>
       {message.sender && <Text style={{ fontFamily, fontSize: 13 * s, lineHeight: 18 * s, color: "#ACC3F2", marginLeft: 3 * s, marginBottom: 3 * s }}>{message.sender.name}</Text>}
       {content}
     </View>
