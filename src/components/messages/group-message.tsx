@@ -25,7 +25,7 @@ export function GroupMessage({ message, s, fontFamily, fontScale, onProfile, ren
   // Reference-specific narrow widths must not shrink the group's message contents.
   const content = <>
     <MessageBubble message={{ ...message, bubbleWidth: undefined }} s={s} fontFamily={fontFamily} fontScale={fontScale} maxWidth="100%" renderPhoto={renderPhoto}/>
-    <MessageTime time={message.time} outgoing={message.outgoing} s={s} fontFamily={fontFamily}/>
+    <MessageTime time={message.pending?"Sending…":message.time} outgoing={message.outgoing} s={s} fontFamily={fontFamily} message={{...message,groupReceipt:true}}/>
   </>;
   if (message.outgoing) return <View style={{ alignItems: "flex-end", paddingLeft: 48 * s }}>{content}</View>;
 

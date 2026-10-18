@@ -3,9 +3,13 @@ import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ClerkProvider, useAuth, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
+import { resourceCache } from "@clerk/expo/resource-cache";
 import { ActivityIndicator, View } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import { getPostSignInRoute, isAccountApproved } from "@/lib/access";
+import { useAccessFailureRouting } from "@/state/messenger";
+import { useEffect } from "react";
+import { clearPrivateCache } from "@/lib/local-cache";
 
 // The web popup also loads this layout when it redirects to /sso-callback.
 WebBrowser.maybeCompleteAuthSession();
@@ -13,8 +17,10 @@ WebBrowser.maybeCompleteAuthSession();
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 function AuthNavigator() {
+  useAccessFailureRouting();
   const pathname = usePathname();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
+  useEffect(()=>{if(authLoaded&&!isSignedIn)clearPrivateCache();},[authLoaded,isSignedIn]);
   const { user, isLoaded: userLoaded } = useUser();
   const isStatusScreen = ["/offline", "/account-suspended", "/concurrent-session"].includes(pathname);
   const isSignInScreen = pathname === "/";
@@ -40,7 +46,7 @@ export default function RootLayout() {
     throw new Error("Set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your local environment before starting Nimqulo.");
   }
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache} __experimental_resourceCache={resourceCache} __experimental_disableNativeClientSync>
       <StatusBar style="light" />
       <AuthNavigator />
     </ClerkProvider>

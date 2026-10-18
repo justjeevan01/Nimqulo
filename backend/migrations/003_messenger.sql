@@ -108,3 +108,9 @@ CREATE TABLE nimqulo_rate_limits (
   requests integer NOT NULL DEFAULT 0,
   PRIMARY KEY(user_id,bucket)
 );
+CREATE TABLE nimqulo_socket_tickets (
+  hash text PRIMARY KEY,
+  user_id text NOT NULL REFERENCES nimqulo_accounts(user_id),
+  session_id text NOT NULL,
+  expires_at timestamptz NOT NULL
+);

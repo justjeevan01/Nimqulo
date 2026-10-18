@@ -32,7 +32,7 @@ export function ReportUserScreen({
   preview = false,
 }: {
   onBack: () => void;
-  onReport?: (reason: string) => boolean;
+  onReport?: (reason: string) => boolean | Promise<boolean>;
   personName?: string;
   preview?: boolean;
 }) {
@@ -42,6 +42,7 @@ export function ReportUserScreen({
   const [confirm, setConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [busy,setBusy]=useState(false);
   if (!l.ready) return <View style={ui.root} />;
   return (
     <SafetyCanvas>
@@ -215,11 +216,10 @@ export function ReportUserScreen({
             <SafetyButton
               l={l}
               label="Submit report"
-              disabled={!onReport}
+              disabled={!onReport||busy}
               onPress={() => {
-                if (onReport?.(reason) === true) setSaved(true);
-                else
-                  setError("Could not record this report. Please try again.");
+                if(busy||!onReport)return;setBusy(true);setError("");
+                void Promise.resolve(onReport(reason)).then(saved=>{if(saved)setSaved(true);else setError("Could not record this report. Please try again.");}).catch(()=>setError("Could not record this report. Please try again.")).finally(()=>setBusy(false));
               }}
             />
             {!onReport && (
