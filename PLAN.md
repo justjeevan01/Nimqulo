@@ -4,22 +4,24 @@
 
 Build an Android-only messenger for an invite-only pilot of up to 20 adults in India. Prioritize reliable private text conversations, small groups, and clear failure handling within a $0 recurring infrastructure budget.
 
-Retain Expo SDK 58, React Native 0.88, Expo Router native tabs, NativeWind, Clerk Google authentication, Neon/Postgres, and Cloudflare. Distribute signed APKs privately. No implementation or repository changes are included in this planning deliverable beyond this document.
+Retain Expo SDK 58, React Native 0.88, Expo Router native tabs, NativeWind, Clerk Google authentication, Neon/Postgres, and Cloudflare. Distribute signed APKs privately. Implementation is tracked in docs/phase-1.md. Phase 1 uses the subsequently requested Neon Functions backend; light/dark theme implementation is excluded at the user's request.
 
 ## 1. Foundation and user experience
 
-- Keep application routes in `src/app/`; place components, state, networking, and business logic outside the route directory. Add a separate Cloudflare backend package in the same repository.
+Status: implemented and validated, excluding light/dark themes as requested. See [Phase 1 implementation and validation](docs/phase-1.md).
+
+- Keep application routes in `src/app/`; place components, state, networking, and business logic outside the route directory. Keep the authenticated Neon Functions backend in the separate backend/ package in the same repository. Cloudflare realtime coordination remains a later-phase architecture decision.
 - Preserve npm and the existing lockfile. Install mobile dependencies through `npx expo install`. Verify exact package versions against SDK 58 documentation and peer dependencies before locking them; treat incompatible NativeWind or Clerk requirements as blockers rather than silently changing the stack.
 - Configure Nimqulo branding, an Android application identifier, authentication redirects, notification configuration, and EAS development/preview APK profiles. Keep signing credentials outside the repository.
 - Use native **Chats**, **People**, and **Settings** tabs. Open conversations, group details, profiles, invitations, and moderation screens through stack routes.
 - Provide Google sign-in, username/display-name setup, optional profile-photo upload, returning-user session restoration, and clear access-denied states.
 - After each fresh sign-in, route admin-approved users immediately to profile setup and unapproved users to Access Required. Require the explicit admin-owned approval flag; completing a profile must never grant approval. The current frontend uses Clerk Public metadata `approved: true` until the backend approval service is implemented.
 - Use Clerk for profile-image upload and identity. Store application usernames and display names in Neon. Usernames are case-insensitive, unique, 3–24 characters, using letters, numbers, and underscores; keep them immutable during the pilot.
-- Support light/dark appearance, screen-reader labels, scalable text, accessible touch targets, keyboard handling, loading states, and empty/error states.
+- Support screen-reader labels, scalable text, accessible touch targets, keyboard handling, loading states, and empty/error states. Light/dark appearance is excluded from Phase 1 at the user's request.
 
 ## 2. Backend, data, and authorization
 
-- Use Cloudflare Workers for authenticated HTTPS APIs and SQLite-backed Durable Objects for live connection coordination. Neon remains authoritative for application records and message history.
+- Use the deployed Neon Functions package for authenticated HTTPS APIs, following the later Neon setup request. Cloudflare Workers with SQLite-backed Durable Objects remain the proposed live connection coordinator for Phase 2. Neon remains authoritative for application records and message history.
 - Verify Clerk tokens server-side. Require an approved Google email and the account’s active session on API calls and realtime connections.
 - Allow one active phone per account. Activating another session replaces the previous backend session and disconnects its live connections.
 - Keep development and pilot environments separate, including Clerk instances, Neon databases, Cloudflare resources, and secrets.

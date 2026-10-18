@@ -1,8 +1,17 @@
 import { Stack } from "expo-router";
+import { SocialProvider } from "@/state/social-fixtures";
+import { CommunityProvider } from "@/state/community-fixtures";
+import { ProfileProvider } from "@/state/profile";
+import { ProfileGate } from "@/components/profile/profile-gate";
+import { useUser } from "@clerk/expo";
+import { useEffect } from "react";
+import { configureNotifications } from "@/lib/notifications";
 
 // Every fresh sign-in to the approved app group starts with the requested profile screen.
-export const unstable_settings = { initialRouteName: "profile-setup" };
+export const unstable_settings = { anchor: "profile-setup" };
 
 export default function AppLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  const { user } = useUser();
+  useEffect(() => { void configureNotifications().catch(() => { /* Existing APKs remain usable until rebuilt. */ }); }, []);
+  return <ProfileProvider key={user?.id}><ProfileGate><SocialProvider><CommunityProvider><Stack screenOptions={{ headerShown: false }} /></CommunityProvider></SocialProvider></ProfileGate></ProfileProvider>;
 }

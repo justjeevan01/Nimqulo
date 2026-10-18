@@ -1,3 +1,4 @@
+import { textSize, textLineHeight } from "@/theme/typography";
 import { Image, type ImageProps } from "expo-image";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -18,7 +19,7 @@ type Props = {
 export function GroupMessage({ message, s, fontFamily, fontScale, onProfile, renderPhoto }: Props) {
   if (message.system) return <View style={{ flexDirection: "row", alignItems: "center", gap: 12 * s, padding: 12 * s, borderWidth: 1, borderColor: "#1C3653", borderRadius: 999 * s, backgroundColor: "#091728" }}>
     <Image source={icons.people} style={{ width: 24 * s, height: 24 * s }} accessible={false}/>
-    <Text style={{ flex: 1, fontFamily, fontSize: 13 * s, lineHeight: 18 * s, color: "#A5BEF0" }}>{message.text}</Text>
+    <Text style={{ flex: 1, fontFamily, fontSize: textSize(13), lineHeight: textLineHeight(18), color: "#A5BEF0" }}>{message.text}</Text>
   </View>;
 
   // Reference-specific narrow widths must not shrink the group's message contents.
@@ -33,7 +34,7 @@ export function GroupMessage({ message, s, fontFamily, fontScale, onProfile, ren
       <Avatar person={message.sender} size={36 * s}/>
     </Pressable>}
     <View style={{ flex: 1, alignItems: "flex-start", paddingRight: 20 * s }}>
-      {message.sender && <Text style={{ fontFamily, fontSize: 13 * s, lineHeight: 18 * s, color: "#ACC3F2", marginLeft: 3 * s, marginBottom: 3 * s }}>{message.sender.name}</Text>}
+      {message.sender && <Text style={{ fontFamily, fontSize: textSize(13), lineHeight: textLineHeight(18), color: "#ACC3F2", marginLeft: 3 * s, marginBottom: 3 * s }}>{message.sender.name}</Text>}
       {content}
     </View>
   </View>;

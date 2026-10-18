@@ -4,7 +4,7 @@ import { ActivityIndicator, View } from "react-native";
 import { AppTabs } from "@/components/chats/app-tabs";
 import { isAccountApproved } from "@/lib/access";
 
-export const unstable_settings = { initialRouteName: "home" };
+export const unstable_settings = { anchor: "home" };
 
 export default function MainTabsLayout() {
   const { isLoaded, user } = useUser();

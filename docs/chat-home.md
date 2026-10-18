@@ -1,3 +1,5 @@
+> Route cleanup: historical `/design-preview/*` URLs below have been removed. The app now uses the authenticated routes documented in [app-routes.md](app-routes.md).
+
 # Chat home
 
 `/home` renders the chat home design. On iOS, `app-tabs.ios.tsx` uses SDK 58's `NativeTabs` from `expo-router/native-tabs`, including Apple's system Liquid Glass on iOS 26+. Android and web resolve `app-tabs.tsx` to the custom `GlassTabs` navigator built with Expo Router's headless tabs.

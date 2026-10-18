@@ -41,3 +41,18 @@ Emulator verification exposed missing icons from percent-encoded SVG data URLs. 
 The floating glass tab bar adds `expo-blur ~58.0.4`. Install a development APK rebuilt with that module to enable native backdrop blur; older installed clients keep the translucent visual fallback. JavaScript styling and navigation changes still refresh through Metro.
 
 The glass-enabled Android development build is [03580681-f977-4610-b74c-cc96065f36bc](https://expo.dev/accounts/justjeevan.01/projects/Triply-ai/builds/03580681-f977-4610-b74c-cc96065f36bc). Its APK is `D:\Android\builds\nimqulo-development-glass-03580681.apk`.
+
+
+If the Google button remains disabled, check emulator DNS before changing authentication code. On this machine, Android could ping `1.1.1.1` but `ping clerk.com` returned `unknown host`, leaving Clerk initialization in an error state. Close Pixel 8 and launch it with explicit DNS servers:
+
+```powershell
+& "$env:LOCALAPPDATA/Android/Sdk/emulator/emulator.exe" -avd Pixel_8 -no-snapshot-load -no-snapshot-save -dns-server 1.1.1.1,8.8.8.8
+```
+
+Then run `npm run android`. The [`-dns-server` emulator option](https://developer.android.com/studio/run/emulator-commandline#common) applies to that emulator launch; a later Android Studio launch may use automatic DNS again. No app data wipe or Clerk dashboard changes are needed.
+
+If cold boot freezes with host graphics, append `-gpu software` to that launch command. This changes rendering for the emulator process without wiping its data.
+
+The root auth route now declares an explicit protected-route destination using the existing approval policy. Reopening `/` with a restored signed-in session routes approved users to profile setup and unapproved users to Access Required, instead of relying on the first available navigator screen.
+
+Verification after the DNS/redirect fix: Pixel 8 restored the existing approved Clerk session, reopened the root route into profile setup, completed real Settings sign-out, and opened the Google account chooser from the enabled authentication button. Account selection was left to the owner. Browser checks reached Google and verified cancellation/reload; lint, typecheck, and all nine unit tests passed. The native capture is `visual-review/signin-google-native.png`.

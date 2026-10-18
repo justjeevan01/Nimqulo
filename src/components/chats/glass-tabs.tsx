@@ -1,3 +1,4 @@
+import { textSize } from "@/theme/typography";
 import { requireOptionalNativeModule } from "expo";
 import { Image } from "expo-image";
 import { usePathname } from "expo-router";
@@ -32,8 +33,7 @@ function GlassButton({ label, isFocused, ...props }: GlassButtonProps) {
   </Pressable>;
 }
 
-export function GlassTabs({ chatsRoute = "home" }: { chatsRoute?: "home" | "chats" }) {
-  const preview = chatsRoute === "chats";
+export function GlassTabs() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const target = useRef<ComponentRef<typeof View> | null>(null);
@@ -57,9 +57,9 @@ export function GlassTabs({ chatsRoute = "home" }: { chatsRoute?: "home" | "chat
   }, [cellWidth, selected, reduceMotion, position]);
   return <Tabs options={{ backBehavior: "initialRoute" }} style={styles.root}>
     <TabList style={{ display: "none" }}>
-      <TabTrigger name={chatsRoute} href={preview ? "/design-preview/chats" : "/home"} />
-      <TabTrigger name="people" href={preview ? "/design-preview/people" : "/people"} />
-      <TabTrigger name="settings" href={preview ? "/design-preview/settings" : "/settings"} />
+      <TabTrigger name="home" href="/home" />
+      <TabTrigger name="people" href="/people" />
+      <TabTrigger name="settings" href="/settings" />
     </TabList>
     <BlurTarget ref={target} style={styles.root} collapsable={false}>
       <TabSlot style={styles.root} />
@@ -71,7 +71,7 @@ export function GlassTabs({ chatsRoute = "home" }: { chatsRoute?: "home" | "chat
           <Image source={sheen} style={StyleSheet.absoluteFill} contentFit="fill" accessible={false} pointerEvents="none" />
           {cellWidth > 0 && <Animated.View pointerEvents="none" style={[styles.selection, { width: cellWidth, transform: [{ translateX: position }] }]} />}
           <View style={styles.list}>
-            <TabTrigger name={chatsRoute} asChild><GlassButton label="Chats" /></TabTrigger>
+            <TabTrigger name="home" asChild><GlassButton label="Chats" /></TabTrigger>
             <TabTrigger name="people" asChild><GlassButton label="People" /></TabTrigger>
             <TabTrigger name="settings" asChild><GlassButton label="Settings" /></TabTrigger>
           </View>
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   list: { flexDirection: "row", padding: 6, backgroundColor: "transparent", alignItems: "stretch" },
   tab: { flex: 1, minHeight: 64, alignItems: "center", justifyContent: "center", gap: 4, borderRadius: 33 },
   icon: { width: 25, height: 25 },
-  label: { fontSize: 12, fontWeight: "500", color: "#B1BED5" },
+  label: { fontSize: textSize(12), fontWeight: "500", color: "#B1BED5" },
   selectedLabel: { color: "#77B8FF", fontWeight: "700" },
   selection: { position: "absolute", top: 6, bottom: 6, left: 6, borderRadius: 33, backgroundColor: "rgba(155, 197, 255, 0.14)", borderWidth: 1, borderColor: "rgba(204, 227, 255, 0.18)", boxShadow: "inset 0 1px 1px rgba(255, 255, 255, 0.12)" },
   pressed: { opacity: 0.65, transform: [{ scale: 0.96 }] },
