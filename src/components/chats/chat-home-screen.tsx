@@ -1,3 +1,4 @@
+import { textSize, textLineHeight } from "@/theme/typography";
 import { useFonts } from "expo-font";
 import { Image, type ImageProps } from "expo-image";
 import { useState, useSyncExternalStore } from "react";
@@ -24,15 +25,15 @@ export function ChatHomeScreen({ conversations, onFindPeople, onCreateGroup, onO
   const [searchVisible, setSearchVisible] = useState(false);
   const [filter, setFilter] = useState<typeof filters[number]>("All");
   const results = conversations.filter(item => (filter === "All" || item.kind === (filter === "Direct" ? "direct" : "group")) && `${item.title} ${item.message}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
-  const text = (size: number, weight: "400" | "500" | "600" | "700" = "400") => ({ fontFamily: loaded ? "InterChats" : undefined, fontSize: size * s, fontWeight: weight });
+  const text = (size: number, weight: "400" | "500" | "600" | "700" = "400") => ({ fontFamily: loaded ? "InterChats" : undefined, fontSize: textSize(size), fontWeight: weight });
   if (!mounted || (!loaded && !fontError)) return <View style={styles.outer} />;
 
   return <View style={styles.outer}><View style={styles.canvas}>
     <Image source={backdrop} style={[StyleSheet.absoluteFill, { height: 801 * s }]} contentFit="fill" accessible={false} />
     <View style={{ paddingTop: Math.max(insets.top + 12 * s, 62 * s), paddingHorizontal: 16 * s }}>
       <View style={{ minHeight: 45 * s, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 * s }}>
-        <Text accessibilityRole="header" style={[text(38.5, "700"), { color: "#FAFAFC", letterSpacing: -1.2 * s, marginLeft: 3 * s, lineHeight: 45 * s, includeFontPadding: false, textAlignVertical: "center" }]}>Chats</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Search chats" accessibilityState={{ expanded: searchVisible }} onPress={() => { if (searchVisible) setQuery(""); setSearchVisible(visible => !visible); }} style={({ pressed }) => [{ width: 45 * s, height: 45 * s, minWidth: 44, minHeight: 44, borderRadius: 24 * s, alignItems: "center", justifyContent: "center", backgroundColor: "#09172A", borderWidth: 1, borderColor: "#152C4B", opacity: pressed ? .65 : 1 }]}><Image source={searchIcon} style={{ width: 20 * s, height: 20 * s }} accessible={false} /></Pressable>
+        <Text accessibilityRole="header" style={[text(38.5, "700"), { color: "#FAFAFC", letterSpacing: -1.2 * s, marginLeft: 3 * s, lineHeight: textLineHeight(45), includeFontPadding: false, textAlignVertical: "center" }]}>Chats</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Search chats" hitSlop={4} accessibilityState={{ expanded: searchVisible }} onPress={() => { if (searchVisible) setQuery(""); setSearchVisible(visible => !visible); }} style={({ pressed }) => [{ width: 45 * s, height: 45 * s, minWidth: 44, minHeight: 44, borderRadius: 24 * s, alignItems: "center", justifyContent: "center", backgroundColor: "#09172A", borderWidth: 1, borderColor: "#152C4B", opacity: pressed ? .65 : 1 }]}><Image source={searchIcon} style={{ width: 20 * s, height: 20 * s }} accessible={false} /></Pressable>
       </View>
       {searchVisible && <View style={{ flexDirection: "row", alignItems: "center", height: 54 * s, minHeight: 48, borderWidth: 1, borderColor: "#1C3454", backgroundColor: "#091523", borderRadius: 23 * s, paddingHorizontal: 18 * s }}>
         <Image source={searchIcon} style={{ width: 21 * s, height: 21 * s, marginRight: 14 * s }} accessible={false} />
@@ -40,7 +41,7 @@ export function ChatHomeScreen({ conversations, onFindPeople, onCreateGroup, onO
         {query.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setQuery("")} hitSlop={10}><Text style={[text(23), { color: "#A8BBE3" }]}>×</Text></Pressable>}
       </View>}
       <View style={{ flexDirection: "row", gap: 7 * s, marginTop: 15 * s, marginBottom: 15 * s }}>
-        {filters.map(name => <Pressable key={name} accessibilityRole="button" accessibilityState={{ selected: filter === name }} onPress={() => setFilter(name)} style={({ pressed }) => [{ flex: name === "All" ? 112 : name === "Direct" ? 115 : 117, height: 42 * s, minHeight: 42, borderRadius: 18 * s, borderWidth: 1, borderColor: filter === name ? "#269CFF" : "#132B48", overflow: "hidden", backgroundColor: "#091626", alignItems: "center", justifyContent: "center", opacity: pressed ? .75 : 1 }]}>
+        {filters.map(name => <Pressable key={name} accessibilityRole="button" hitSlop={{top:3,bottom:3}} accessibilityState={{ selected: filter === name }} onPress={() => setFilter(name)} style={({ pressed }) => [{ flex: name === "All" ? 112 : name === "Direct" ? 115 : 117, height: fontScale > 1.2 ? undefined : 42 * s, minHeight: 42, paddingVertical: fontScale > 1.2 ? 8 : 0, borderRadius: 18 * s, borderWidth: 1, borderColor: filter === name ? "#269CFF" : "#132B48", overflow: "hidden", backgroundColor: "#091626", alignItems: "center", justifyContent: "center", opacity: pressed ? .75 : 1 }]}>
           {filter === name && <Image source={blueFill} style={StyleSheet.absoluteFill} contentFit="fill" accessible={false} />}
           <Text style={[text(14, "600"), { color: filter === name ? "white" : "#C2D1F6" }]}>{name}</Text>
         </Pressable>)}
@@ -59,7 +60,7 @@ export function ChatHomeScreen({ conversations, onFindPeople, onCreateGroup, onO
       ListEmptyComponent={<View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 * s, paddingTop: 4 * s, minHeight: 370 * s }}>
         <View style={{ width: 111 * s, height: 111 * s, borderRadius: 56 * s, backgroundColor: "#081523", borderWidth: 1, borderColor: "#102741", alignItems: "center", justifyContent: "center" }}><Image source={inboxIcon} style={{ width: 90 * s, height: 73 * s }} accessible={false} /></View>
         <Text accessibilityRole="header" style={[text(22.5, "600"), { color: "#FAFAFC", textAlign: "center", marginTop: 15 * s, letterSpacing: -.5 * s }]}>{query.trim() || filter !== "All" ? "No conversations found" : "No conversations yet"}</Text>
-        <Text style={[text(18), { color: "#93AADA", textAlign: "center", lineHeight: 25 * s, marginTop: 9 * s, letterSpacing: -.5 * s }]}>{query.trim() || filter !== "All" ? "Try another search or start\na new conversation." : "Start a conversation with a\ntrusted connection."}</Text>
+        <Text style={[text(18), { color: "#93AADA", textAlign: "center", lineHeight: textLineHeight(25), marginTop: 9 * s, letterSpacing: -.5 * s }]}>{query.trim() || filter !== "All" ? "Try another search or start\na new conversation." : "Start a conversation with a\ntrusted connection."}</Text>
         <Pressable accessibilityRole="button" onPress={onFindPeople} style={({ pressed }) => [{ width: 269 * s, minHeight: 53 * s, padding: 12 * s, borderRadius: 18 * s, borderWidth: 1, borderColor: "#269CFF", marginTop: 25 * s, alignItems: "center", justifyContent: "center", opacity: pressed ? .75 : 1, overflow: "hidden" }]}><Image source={blueFill} style={StyleSheet.absoluteFill} contentFit="fill" accessible={false} /><Text style={[text(17, "600"), { color: "white" }]}>Find People</Text></Pressable>
       </View>}
     />

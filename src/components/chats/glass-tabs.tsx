@@ -1,3 +1,4 @@
+import { textSize } from "@/theme/typography";
 import { requireOptionalNativeModule } from "expo";
 import { Image } from "expo-image";
 import { usePathname } from "expo-router";
@@ -88,7 +89,7 @@ const styles = StyleSheet.create({
   list: { flexDirection: "row", padding: 6, backgroundColor: "transparent", alignItems: "stretch" },
   tab: { flex: 1, minHeight: 64, alignItems: "center", justifyContent: "center", gap: 4, borderRadius: 33 },
   icon: { width: 25, height: 25 },
-  label: { fontSize: 12, fontWeight: "500", color: "#B1BED5" },
+  label: { fontSize: textSize(12), fontWeight: "500", color: "#B1BED5" },
   selectedLabel: { color: "#77B8FF", fontWeight: "700" },
   selection: { position: "absolute", top: 6, bottom: 6, left: 6, borderRadius: 33, backgroundColor: "rgba(155, 197, 255, 0.14)", borderWidth: 1, borderColor: "rgba(204, 227, 255, 0.18)", boxShadow: "inset 0 1px 1px rgba(255, 255, 255, 0.12)" },
   pressed: { opacity: 0.65, transform: [{ scale: 0.96 }] },

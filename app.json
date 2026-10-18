@@ -4,25 +4,24 @@
     "slug": "Triply-ai",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/nimqulo-icon.png",
     "scheme": "triplyai",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/nimqulo-icon.png"
     },
     "android": {
       "package": "com.jeeva.nimqulo",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#020B18",
+        "foregroundImage": "./assets/images/nimqulo-mark.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/nimqulo-icon.png",
+      "bundler": "metro"
     },
     "plugins": [
       [
@@ -36,9 +35,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#020B18",
+          "image": "./assets/images/nimqulo-mark.png",
+          "imageWidth": 100
         }
       ],
       [
@@ -54,6 +53,13 @@
           "photosPermission": "Allow Nimqulo to choose your profile photo.",
           "cameraPermission": false,
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#0873FF",
+          "defaultChannel": "messages"
         }
       ]
     ],

@@ -1,3 +1,4 @@
+import { textSize, textLineHeight } from "@/theme/typography";
 import { useFonts } from "expo-font";
 import { Image } from "expo-image";
 import { useSyncExternalStore } from "react";
@@ -43,10 +44,10 @@ export function AuthScreen({ onGoogleSignIn, isReady, isSigningIn, error }: Auth
           <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.backgroundTint]} />
           <View style={[styles.brand, { top: Math.max(insets.top + 40, screenHeight * 0.136) }]}>
             <Image source={require("../../../assets/auth/logo.png")} style={{ width: 112 * logoScale, height: 112 * logoScale }} contentFit="contain" accessible={false} />
-            <Text accessibilityRole="header" style={[styles.wordmark, { fontFamily, fontSize: 46 * scale, lineHeight: 60 * scale, marginTop: 7 * scale }]}>Nimqulo</Text>
+            <Text accessibilityRole="header" style={[styles.wordmark, { fontFamily, fontSize: textSize(46), lineHeight: textLineHeight(60), marginTop: 7 * scale }]}>Nimqulo</Text>
           </View>
           <View style={[styles.message, { top: screenHeight * 0.345 }]}>
-            <Text style={[styles.headline, { fontFamily, fontSize: 33 * scale, lineHeight: 40 * scale }]}>
+            <Text style={[styles.headline, { fontFamily, fontSize: textSize(33), lineHeight: textLineHeight(40) }]}>
               Private messaging{"\n"}for{"\u00A0"}<Text style={styles.highlight}>trusted people.</Text>
             </Text>
           </View>
@@ -54,7 +55,7 @@ export function AuthScreen({ onGoogleSignIn, isReady, isSigningIn, error }: Auth
             <Pressable accessibilityRole="button" accessibilityLabel="Continue with Google" accessibilityHint="Sign in to your invite-only Nimqulo account" accessibilityState={{ disabled: !isReady || isSigningIn, busy: isSigningIn }} disabled={!isReady || isSigningIn} onPress={onGoogleSignIn}
               style={({ pressed }) => [styles.googleButton, { height: 78 * logoScale, minHeight: 56, paddingHorizontal: 23 * scale, gap: 18 * scale }, pressed && styles.buttonPressed, (!isReady || isSigningIn) && styles.buttonDisabled]}>
               <Image source={google} style={{ width: 37 * scale, height: 37 * scale }} accessible={false} />
-              <Text style={[styles.buttonLabel, { fontFamily, fontSize: 19 * scale, lineHeight: 28 * scale }]}>{isSigningIn ? "Connecting…" : "Continue with Google"}</Text>
+              <Text style={[styles.buttonLabel, { fontFamily, fontSize: textSize(19), lineHeight: textLineHeight(28) }]}>{isSigningIn ? "Connecting…" : "Continue with Google"}</Text>
               <View style={[styles.arrowCircle, { width: 46 * logoScale, height: 50 * logoScale }]}>
                 {isSigningIn ? <ActivityIndicator color="#CFDDF5" /> : <Image source={arrow} style={{ width: 27 * scale, height: 27 * scale }} accessible={false} />}
               </View>
@@ -70,7 +71,7 @@ export function AuthScreen({ onGoogleSignIn, isReady, isSigningIn, error }: Auth
             <View style={[styles.shieldBadge, { width: 45 * logoScale, height: 52 * logoScale }]}>
               <Image source={shield} style={{ width: 25 * scale, height: 29 * scale }} accessible={false} />
             </View>
-            <Text style={[styles.approvalLabel, { fontFamily, fontSize: 17 * scale, lineHeight: 25 * scale }]}>Approved users only</Text>
+            <Text style={[styles.approvalLabel, { fontFamily, fontSize: textSize(17), lineHeight: textLineHeight(25) }]}>Approved users only</Text>
           </View>
         </View>
       </ScrollView>
@@ -100,5 +101,5 @@ const styles = StyleSheet.create({
   shieldBadge: { backgroundColor: "rgba(21, 118, 104, 0.22)", borderRadius: 24, alignItems: "center", justifyContent: "center" },
   approvalLabel: { color: "#7F91B5", fontWeight: "500", letterSpacing: -0.7 },
   errorPanel: { position: "absolute", left: 0, right: 0, backgroundColor: "rgba(2, 11, 24, 0.92)", borderRadius: 16, borderWidth: 1, borderColor: "#587395", padding: 12 },
-  notice: { color: "#BDCCE4", fontSize: 13, lineHeight: 18, textAlign: "center" },
+  notice: { color: "#BDCCE4", fontSize: textSize(13), lineHeight: textLineHeight(18), textAlign: "center" },
 });

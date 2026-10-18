@@ -9,13 +9,21 @@
       "environment": "development",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "extends": "base"
     },
     "preview": {
       "distribution": "internal",
       "environment": "preview",
       "android": {
         "buildType": "apk"
+      },
+      "extends": "base"
+    },
+    "base": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://br-calm-frost-a1ndi9sf-api.compute.c-1.ap-southeast-1.aws.neon.tech/",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_cmFwaWQtc3BvbmdlLTk5NzkuY2xlcmsuYWNjb3VudHMuZGV2JA"
       }
     }
   }

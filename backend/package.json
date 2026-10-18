@@ -1,0 +1,6 @@
+{
+  "name": "@nimqulo/backend",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "24.x" }
+}

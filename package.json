@@ -3,8 +3,16 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/s3-presigned-post": "^3.1152.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
     "@clerk/expo": "^4.13.0",
     "@expo/ui": "~58.0.20",
+    "@neon/config": "^1.9.2",
+    "@neon/env": "^1.6.3",
+    "@neon/functions": "^0.11.0",
+    "@types/pg": "^8.23.1",
+    "drizzle-orm": "^0.45.4",
     "expo": "~58.0.14",
     "expo-auth-session": "~58.0.13",
     "expo-blur": "~58.0.4",
@@ -17,6 +25,7 @@
     "expo-image": "~58.0.15",
     "expo-image-picker": "~58.0.10",
     "expo-linking": "~58.0.13",
+    "expo-notifications": "~58.1.5",
     "expo-router": "~58.0.23",
     "expo-secure-store": "~58.0.2",
     "expo-splash-screen": "~58.0.10",
@@ -24,6 +33,11 @@
     "expo-symbols": "~58.0.4",
     "expo-system-ui": "~58.0.6",
     "expo-web-browser": "~58.0.6",
+    "files-sdk": "^3.1.1",
+    "hono": "^4.13.13",
+    "jose": "^6.2.12",
+    "nativewind": "4.2.7",
+    "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.0",
@@ -32,10 +46,13 @@
     "react-native-safe-area-context": "~5.10.1",
     "react-native-screens": "~4.30.0",
     "react-native-web": "~0.21.4",
-    "react-native-worklets": "0.13.0"
+    "react-native-worklets": "0.13.0",
+    "tailwindcss": "3.4.19"
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
+    "babel-preset-expo": "~58.0.0",
+    "esbuild": "^0.28.2",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~58.0.4",
     "typescript": "~6.0.3"
@@ -47,7 +64,13 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --experimental-strip-types --test tests/access.test.cjs tests/svg.test.cjs tests/sign-out.test.cjs"
+    "test": "node --experimental-strip-types --test tests/access.test.cjs tests/svg.test.cjs tests/sign-out.test.cjs tests/backend.test.cjs tests/backend-auth.test.cjs tests/backend-client.test.cjs",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && expo export --platform web --max-workers 1 && node scripts/build-backend.cjs",
+    "backend:dev": "neon dev --env .env",
+    "backend:deploy": "neon deploy --env .env",
+    "db:migrate": "node --env-file=.env scripts/migrate.cjs",
+    "backend:smoke": "node --env-file=.env --experimental-strip-types scripts/neon-smoke.cjs"
   },
   "private": true
 }

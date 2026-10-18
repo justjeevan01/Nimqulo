@@ -1,3 +1,4 @@
+import { textLineHeight } from "@/theme/typography";
 import { useState } from "react";
 import { Image } from "expo-image";
 import { Pressable, Text, View } from "react-native";
@@ -159,7 +160,7 @@ export function ReportUserScreen({
           <Text
             style={[
               type(l, 12, "400", "#A7BDEB"),
-              { flex: 1, lineHeight: 17 * s },
+              { flex: 1, lineHeight: textLineHeight(17) },
             ]}
           >
             Reports are reviewed by our moderation team. If this is an

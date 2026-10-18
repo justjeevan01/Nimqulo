@@ -1,3 +1,4 @@
+import { textSize, textLineHeight } from "@/theme/typography";
 import { useAuth, useClerk } from "@clerk/expo";
 import { useFonts } from "expo-font";
 import { Image } from "expo-image";
@@ -60,19 +61,19 @@ export function AccessRequiredScreen() {
             <Image source={require("../../../assets/access/lock.svg")} style={{ width: 192 * scale, height: 192 * scale }} contentFit="contain" accessible={false} />
           </View>
           <View style={[styles.copy, { top: screenHeight * 0.445, paddingHorizontal: 20 * scale }]}>
-            <Text accessibilityRole="header" style={[styles.title, { fontFamily, fontSize: 31.5 * scale, lineHeight: 40 * scale }]}>Not approved yet</Text>
-            <Text style={[styles.body, { fontFamily, fontSize: 17 * scale, lineHeight: 23 * scale, marginTop: 14 * scale }]}>Your account is not yet approved{"\n"}for Nimqulo.</Text>
+            <Text accessibilityRole="header" style={[styles.title, { fontFamily, fontSize: textSize(31.5), lineHeight: textLineHeight(40) }]}>Not approved yet</Text>
+            <Text style={[styles.body, { fontFamily, fontSize: textSize(17), lineHeight: textLineHeight(23), marginTop: 14 * scale }]}>Your account is not yet approved{"\n"}for Nimqulo.</Text>
           </View>
           <View style={[styles.actions, { top: screenHeight * 0.734, paddingHorizontal: 31 * scale }]}>
             <Pressable accessibilityRole="button" accessibilityLabel="Contact Support" accessibilityHint="Open your email app to contact Nimqulo support" accessibilityState={{ disabled: !!busy, busy: busy === "support" }} disabled={!!busy} onPress={() => runAction("support")}
               style={({ pressed }) => [styles.supportButton, { height: 59 * scale, borderRadius: 26 * scale, gap: 16 * scale }, pressed && styles.pressed]}>
               <Image source={buttonGradient} style={StyleSheet.absoluteFill} contentFit="fill" accessible={false} />
               {busy === "support" ? <ActivityIndicator color="#FFFFFF" /> : <Image source={supportIcon} style={{ width: 25 * scale, height: 25 * scale }} accessible={false} />}
-              <Text style={[styles.supportLabel, { fontFamily, fontSize: 17 * scale }]}>Contact Support</Text>
+              <Text style={[styles.supportLabel, { fontFamily, fontSize: textSize(17) }]}>Contact Support</Text>
             </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="Return to Sign In" accessibilityState={{ disabled: !!busy || !isLoaded, busy: busy === "return" }} disabled={!!busy || !isLoaded} onPress={() => runAction("return")}
               style={({ pressed }) => [styles.returnButton, { marginTop: 7 * scale }, pressed && styles.pressed]}>
-              {busy === "return" ? <ActivityIndicator color="#008BFF" /> : <Text style={[styles.returnLabel, { fontFamily, fontSize: 17 * scale }]}>Return to Sign In</Text>}
+              {busy === "return" ? <ActivityIndicator color="#008BFF" /> : <Text style={[styles.returnLabel, { fontFamily, fontSize: textSize(17) }]}>Return to Sign In</Text>}
             </Pressable>
           </View>
           {error && <View style={[styles.errorPanel, { bottom: Math.max(insets.bottom + 16, 20) }]}><Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{error}</Text></View>}
@@ -97,5 +98,5 @@ const styles = StyleSheet.create({
   returnLabel: { color: "#008BFF", fontWeight: "500" },
   pressed: { opacity: 0.75 },
   errorPanel: { position: "absolute", left: 24, right: 24, borderRadius: 12, padding: 12, backgroundColor: "rgba(2, 11, 24, 0.95)" },
-  error: { color: "#C4D2EB", fontSize: 14, lineHeight: 20, textAlign: "center" },
+  error: { color: "#C4D2EB", fontSize: textSize(14), lineHeight: textLineHeight(20), textAlign: "center" },
 });

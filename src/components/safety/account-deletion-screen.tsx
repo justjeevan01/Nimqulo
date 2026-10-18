@@ -1,3 +1,4 @@
+import { textLineHeight } from "@/theme/typography";
 import { Image } from "expo-image";
 import { useRef, useState } from "react";
 import {
@@ -121,7 +122,7 @@ export function AccountDeletionScreen({
             style={[
               type(l, 14, "400", "#A8BAE5"),
               {
-                lineHeight: 20 * s,
+                lineHeight: textLineHeight(20),
                 textAlign: "center",
                 marginTop: 9 * s,
                 marginBottom: 14 * s,
@@ -173,7 +174,7 @@ export function AccountDeletionScreen({
                   <Text
                     style={[
                       type(l, 10.5, "400", "#9FAFD2"),
-                      { lineHeight: 14 * s },
+                      { lineHeight: textLineHeight(14) },
                     ]}
                   >
                     {body}

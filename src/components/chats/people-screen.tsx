@@ -1,3 +1,4 @@
+import { textLineHeight } from "@/theme/typography";
 import { Image } from "expo-image";
 import { useState } from "react";
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from "react-native";
@@ -23,7 +24,7 @@ export function PeopleScreen({people=[],onSearch,onRequests,onInvitations,onCrea
     <View style={{flexDirection:"row",alignItems:"center",gap:8*s}}>{item.sharedGroups?<Image source={icons.people} style={{width:15*s,height:15*s}} accessible={false}/>:<View style={{width:11*s,height:11*s,borderRadius:8,backgroundColor:"#00CC80"}}/>}<Text style={type(l,11.5,"400","#9BB5E7")}>{item.sharedGroups?`${item.sharedGroups} shared groups`:"Connected"}</Text></View>
     <Pressable accessibilityRole="button" accessibilityLabel={`Options for ${item.name}`} onPress={event=>{event.stopPropagation();setSelected(item);}} style={{width:28*s,minHeight:44,alignItems:"center",justifyContent:"center"}} hitSlop={4}><Image source={icons.more} style={{width:23*s,height:23*s}} accessible={false}/></Pressable>
    </Panel>
-  </Pressable>} ListEmptyComponent={<View style={[ui.empty,{flex:1}]}><Image source={icons.people} style={{width:48*s,height:48*s}} accessible={false}/><Text style={type(l,22,"600","white")}>{invites?"No invitations yet":"No connections yet"}</Text><Text style={[type(l,16,"400","#93AADA"),{textAlign:"center",lineHeight:23*s}]}>{invites?"Your invitations will appear here.":"Find people by their exact username\nand send a connection request."}</Text><Action l={l} blue label="Find People" style={{minHeight:44,width:240*s}} onPress={onSearch}/></View>}/>
+  </Pressable>} ListEmptyComponent={<View style={[ui.empty,{flex:1}]}><Image source={icons.people} style={{width:48*s,height:48*s}} accessible={false}/><Text style={type(l,22,"600","white")}>{invites?"No invitations yet":"No connections yet"}</Text><Text style={[type(l,16,"400","#93AADA"),{textAlign:"center",lineHeight:textLineHeight(23)}]}>{invites?"Your invitations will appear here.":"Find people by their exact username\nand send a connection request."}</Text><Action l={l} blue label="Find People" style={{minHeight:44,width:240*s}} onPress={onSearch}/></View>}/>
   <Modal visible={!!selected} transparent animationType="fade" onRequestClose={()=>setSelected(undefined)}><View style={styles.overlay}><Panel style={{width:"100%",maxWidth:340,padding:24,gap:16}}><Text style={type(l,22,"600","white")}>{selected?.name}</Text><Action l={l} label="View profile" blue onPress={()=>{if(selected)onProfile?.(selected);setSelected(undefined);}}/><Action l={l} label="Message" onPress={()=>{if(selected)onMessage?.(selected);setSelected(undefined);}}/><Action l={l} label="Close options" onPress={()=>setSelected(undefined)}/></Panel></View></Modal>
  </SocialCanvas>;
 }

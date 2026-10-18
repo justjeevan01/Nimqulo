@@ -1,3 +1,4 @@
+import { textLineHeight } from "@/theme/typography";
 import { Image } from "expo-image";
 import { useRef, useState } from "react";
 import { Text, useWindowDimensions, View } from "react-native";
@@ -128,7 +129,7 @@ export function StatusScreen({
           <Text
             style={[
               type(l, 17, "400", "#B4C3E9"),
-              { lineHeight: 24 * s, textAlign: "center", marginTop: 17 * s },
+              { lineHeight: textLineHeight(24), textAlign: "center", marginTop: 17 * s },
             ]}
           >
             {c.body}
@@ -137,7 +138,7 @@ export function StatusScreen({
             <Text
               style={[
                 type(l, 15.5, "400", "#A8B9E4"),
-                { textAlign: "center", lineHeight: 22 * s, marginTop: 17 * s },
+                { textAlign: "center", lineHeight: textLineHeight(22), marginTop: 17 * s },
               ]}
             >
               {c.extra}

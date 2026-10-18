@@ -1,8 +1,7 @@
 import type { PropsWithChildren } from "react";
-import { View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-screens/experimental";
 
+// Native tabs supply their own bottom inset; do not reserve space for the old floating dock.
 export function TabContent({ children }: PropsWithChildren) {
-  const { bottom } = useSafeAreaInsets();
-  return <View style={{ flex: 1, backgroundColor: "#020B18", paddingBottom: Math.max(bottom, 12) + 100 }}>{children}</View>;
+  return <SafeAreaView edges={{ bottom: true }} style={{ flex: 1, backgroundColor: "#020B18" }}>{children}</SafeAreaView>;
 }
