@@ -54,7 +54,7 @@ export function DirectMessageScreen({ peer, initialMessages = [], history, initi
   const scrolling=useCallback(()=>historyMoving.current||Date.now()-lastHistoryScroll.current<150,[]);
   const chooseReply=useCallback((message:DirectMessage)=>{if(!message.seq||message.pending||message.failed||message.system||message.deleted)return;setReply({id:message.id,authorId:message.sender?.id||"",name:message.outgoing?"You":message.sender?.name||peer.name,text:message.text.slice(0,240)});input.current?.focus();},[peer.name]);
   const viewability=useMemo(()=>({itemVisiblePercentThreshold:65,minimumViewTime:300}),[]);
-  const visibleMessages=useCallback(({viewableItems}:{viewableItems:{item:DirectMessage;isViewable:boolean}[]})=>{const positions=viewableItems.filter(v=>v.isViewable&&!v.item.pending&&!v.item.failed).map(v=>v.item.seq||0);onVisibleMessages?.(Math.max(0,...positions));},[onVisibleMessages]);
+  const visibleMessages=useCallback(({viewableItems}:{viewableItems:{item:DirectMessage;isViewable:boolean}[]})=>{const positions=viewableItems.filter(v=>v.isViewable&&!v.item.outgoing&&!v.item.pending&&!v.item.failed).map(v=>v.item.seq||0);onVisibleMessages?.(Math.max(0,...positions));},[onVisibleMessages]);
   function cancelPhotoTap() {
     photoTouch.current.cancelled = true;
     lastHistoryScroll.current = Date.now();

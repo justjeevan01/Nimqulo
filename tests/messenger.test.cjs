@@ -12,7 +12,10 @@ test("messenger transactions enforce authorization and lifecycle rules on Postgr
   await admin.query(`CREATE SCHEMA ${schema}`);
   const pool = new Pool({ connectionString: url.href, max: 5, connectionTimeoutMillis: 15000, options: `-c search_path=${schema}` });
   const fs = require("node:fs");
-  for (const file of fs.readdirSync("backend/migrations").filter(f=>f.endsWith(".sql")).sort()) await pool.query(fs.readFileSync(`backend/migrations/${file}`,"utf8"));
+  for (const file of fs.readdirSync("backend/migrations").filter(f=>f.endsWith(".sql")).sort()) {
+    if(file==="006_socket_tickets.sql")assert.equal((await pool.query("SELECT to_regclass('nimqulo_socket_tickets') AS name")).rows[0].name,null,"the new migration repairs databases that already applied 003 without tickets");
+    await pool.query(fs.readFileSync(`backend/migrations/${file}`,"utf8"));
+  }
   const prefix = `qa_${randomUUID().replaceAll("-", "").slice(0,8)}`;
   const users = Array.from({ length: 23 }, (_, i) => `${prefix}_${i}`);
   const [alice,bob,eve] = users;
@@ -27,6 +30,14 @@ test("messenger transactions enforce authorization and lifecycle rules on Postgr
       await pool.query("INSERT INTO nimqulo_accounts(user_id,approved) VALUES($1,true)",[users[i]]);
       await pool.query("INSERT INTO nimqulo_profiles(user_id,display_name,username) VALUES($1,$2,$3)",[users[i],`QA Person ${i}`,`${prefix}_${i}`]);
     }
+    await t.test("socket ticket migration preserves existing tables and records when reapplied",async()=>{
+      await pool.query("INSERT INTO nimqulo_socket_tickets(hash,user_id,session_id,expires_at) VALUES('qa-existing',$1,'qa-session',now()+interval '30 seconds')",[alice]);
+      await pool.query(fs.readFileSync("backend/migrations/006_socket_tickets.sql","utf8"));
+      assert.equal((await pool.query("SELECT user_id,session_id FROM nimqulo_socket_tickets WHERE hash='qa-existing'")).rows[0].user_id,alice);
+      await assert.rejects(pool.query("INSERT INTO nimqulo_socket_tickets(hash,user_id,session_id,expires_at) VALUES('qa-bad','missing-account','qa',now())"),{code:"23503"});
+      await assert.rejects(pool.query("INSERT INTO nimqulo_socket_tickets(hash,user_id,session_id,expires_at) VALUES('qa-existing',$1,'qa',now())",[alice]),{code:"23505"});
+      await pool.query("DELETE FROM nimqulo_socket_tickets WHERE hash='qa-existing'");
+    });
     await t.test("unaccepted connections cannot message, and concurrent requests stay unique",async()=>{
       await assert.rejects(store.direct(alice,bob),{status:403});
       const requests=await Promise.allSettled([store.requestConnection(alice,bob),store.requestConnection(bob,alice)]);
@@ -218,6 +229,22 @@ test("messenger transactions enforce authorization and lifecycle rules on Postgr
         assert.equal((await pool.query("SELECT push_token FROM nimqulo_devices WHERE user_id=$1",[bob])).rows[0].push_token,null);
         const event=(await pool.query("SELECT realtime_done,push_done FROM nimqulo_events WHERE message_id=$1 AND user_id=$2",[message.id,bob])).rows[0];
         assert.equal(event.realtime_done,true);assert.equal(event.push_done,true);
+      }finally{global.fetch=original;}
+    });
+    await t.test("missing realtime configuration completes delivery without dispatch or repeated claims",async()=>{
+      const {createDelivery}=await import("../backend/delivery.ts");
+      await pool.query("UPDATE nimqulo_events SET realtime_done=true,push_done=true");
+      const original=global.fetch;let calls=0;
+      global.fetch=async()=>{calls++;throw Error("No dispatch expected");};
+      try{
+        for(const config of [{},{realtimeUrl:"https://realtime.example"},{serviceKey:"qa-key"}]){
+          const {rows:[event]}=await pool.query("INSERT INTO nimqulo_events(user_id,kind,push_done) VALUES($1,'qa',true) RETURNING id",[bob]);
+          const sweep=createDelivery(store,{...config,clerkSecret:"qa-key",deleteObject:async()=>{}});
+          await sweep();await sweep();
+          const saved=(await pool.query("SELECT realtime_done,push_done,attempts FROM nimqulo_events WHERE id=$1",[event.id])).rows[0];
+          assert.deepEqual(saved,{realtime_done:true,push_done:true,attempts:1});
+        }
+        assert.equal(calls,0);
       }finally{global.fetch=original;}
     });
   } finally {await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();}

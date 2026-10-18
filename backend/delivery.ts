@@ -16,6 +16,8 @@ export function createDelivery(store:MessengerStore, options:DeliveryOptions) {
           if(!response.ok)throw new Error("Realtime dispatch rejected");
           await store.pool.query("UPDATE nimqulo_events SET realtime_done=true WHERE id=$1",[event.id]);
           } catch {console.error(JSON.stringify({event:"realtime_dispatch_failed",eventId:String(event.id)}));}
+        } else if(!event.realtime_done) {
+          await store.pool.query("UPDATE nimqulo_events SET realtime_done=true WHERE id=$1",[event.id]);
         }
         if(!event.push_done) {
           const {rows:[target]}=await store.pool.query(`SELECT d.push_token,d.session_id,p.notifications,p.previews,a.status,a.approved,m.body,m.deleted,

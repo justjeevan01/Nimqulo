@@ -6,7 +6,15 @@ import type { MessengerStore } from "./messenger-store.ts";
 export type AppEnv = { Variables: { userId: string; identity: Identity; requestId: string } };
 export function messengerRoutes(store: MessengerStore,publishTyping?:TypingPublisher) {
   const app = new Hono<AppEnv>();
-  app.use("*", bodyLimit({ maxSize: 24 * 1024 }));
+  const limit = bodyLimit({ maxSize: 24 * 1024 });
+  for (const path of [
+    "/session/activate", "/session", "/community", "/people", "/connections",
+    "/connections/:id/decision", "/connections/:target", "/conversations/direct",
+    "/groups", "/groups/:id", "/groups/:id/members", "/invitations/:id/decision",
+    "/conversations/:id/messages", "/conversations/:id/read", "/conversations/:id/typing",
+    "/blocks/:id", "/reports", "/device", "/events", "/moderation/reports",
+    "/moderation/reports/:id", "/account", "/realtime/ticket", "/conversations/:id/access",
+  ]) app.use(path, limit);
   app.post("/session/activate", async c => {
     const body = await c.req.json();
     validId(body.deviceId);

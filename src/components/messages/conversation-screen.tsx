@@ -14,6 +14,7 @@ export function ConversationScreen({groupMode=false}:{groupMode?:boolean}){
  const [history,setHistory]=useState<readonly DirectMessage[]>();const [initial,setInitial]=useState<Cache>();
  const [before,setBefore]=useState<number|null>(null);const [loading,setLoading]=useState(false);const [error,setError]=useState("");const [denied,setDenied]=useState(false);
  const alive=useRef(true);const loadingRef=useRef(false);const generation=useRef(0);
+ const reloadQueued=useRef(false);const [reload,setReload]=useState(0);
  const focused=useIsFocused();const [appActive,setAppActive]=useState(AppState.currentState==="active");
  const [visibleSeq,setVisibleSeq]=useState(0);const acknowledged=useRef(0);const [readAttempt,setReadAttempt]=useState(0);
  useEffect(()=>{const listener=AppState.addEventListener("change",state=>setAppActive(state==="active"));return()=>listener.remove();},[]);
@@ -31,16 +32,16 @@ export function ConversationScreen({groupMode=false}:{groupMode?:boolean}){
  const convert=useCallback((m:MessageRecord):DirectMessage=>({id:m.id,retryId:m.retryId,seq:m.seq,text:m.text,createdAt:m.createdAt,deleted:m.deleted,reply:m.reply,readBy:m.readBy,recipientCount:m.recipientCount,outgoing:m.authorId===userId,sender:m.sender,time:new Date(m.createdAt).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}),[userId]);
  useEffect(()=>{let active=true;void readCache<Cache>(userId,`conversation-${id}`).then(cache=>{if(active)setInitial(cache?{...cache,messages:restoreMessages(cache.messages)}:{messages:[],draft:""});});return()=>{active=false;};},[id,userId]);
  const load=useCallback(async(cursor?:number)=>{
-  if(loadingRef.current)return;loadingRef.current=true;const current=++generation.current;
+  if(loadingRef.current){if(cursor===undefined)reloadQueued.current=true;return;}loadingRef.current=true;const current=++generation.current;
   await Promise.resolve();if(!alive.current){loadingRef.current=false;return;}setLoading(true);
   try{const page=await api.messages(id,cursor);if(!alive.current||current!==generation.current)return;
     setHistory(previous=>cursor?[...page.messages.map(convert),...(previous||[]).filter(m=>!page.messages.some(r=>r.id===m.id))]:page.messages.map(convert));
     setBefore(page.before);setError("");setDenied(false);
   }catch(cause){if(alive.current){setError(cause instanceof Error?cause.message:"Could not load messages.");if(cause instanceof ApiError&&[403,404].includes(cause.status)){setDenied(true);setHistory([]);void writeCache(userId,`conversation-${id}`,{messages:[],draft:""});}}}
-  finally{loadingRef.current=false;if(alive.current)setLoading(false);}
+  finally{loadingRef.current=false;if(alive.current){setLoading(false);if(reloadQueued.current){reloadQueued.current=false;setReload(value=>value+1);}}}
  },[api,id,convert,userId]);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[id]);
- useEffect(()=>{const timeout=setTimeout(()=>void load(),0);return()=>clearTimeout(timeout);},[load,revision]);
+ useEffect(()=>{const timeout=setTimeout(()=>void load(),0);return()=>clearTimeout(timeout);},[load,revision,reload]);
  const cache=useCallback((messages:readonly DirectMessage[],draft:string,reply?:MessageReply)=>{if(!denied&&alive.current)void writeCache(userId,`conversation-${id}`,{messages:messages.slice(-250),draft,reply}).catch(()=>{});},[denied,id,userId]);
  const send=useCallback(async(draft:MessageDraft)=>{if(draft.image)throw Error("Only text messages are supported.");const message=await api.sendMessage(id,draft.text,draft.retryId,draft.replyToId);void refresh();return convert(message);},[api,id,refresh,convert]);
  if(!initial)return <View style={{flex:1,backgroundColor:"#020C17",justifyContent:"center"}}><ActivityIndicator color="#008BFF"/></View>;

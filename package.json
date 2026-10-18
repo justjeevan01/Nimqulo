@@ -65,7 +65,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --experimental-strip-types --test tests/access.test.cjs tests/svg.test.cjs tests/sign-out.test.cjs tests/backend.test.cjs tests/backend-auth.test.cjs tests/backend-client.test.cjs tests/message-reconciliation.test.cjs tests/chat-presentation.test.cjs tests/typing.test.cjs",
+    "test": "node --experimental-strip-types --test tests/access.test.cjs tests/svg.test.cjs tests/sign-out.test.cjs tests/backend.test.cjs tests/backend-auth.test.cjs tests/backend-client.test.cjs tests/message-reconciliation.test.cjs tests/chat-presentation.test.cjs tests/typing.test.cjs tests/review-regressions.test.cjs",
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && expo export --platform android --max-workers 1 && node scripts/build-backend.cjs",
     "test:messenger": "node --env-file=.env scripts/test-messenger.cjs",

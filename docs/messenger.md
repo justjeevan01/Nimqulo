@@ -6,7 +6,7 @@ Nimqulo targets Android. The existing screens now use the authenticated Neon API
 
 Chat dates, quoted replies, visible-message read receipts and the updated launcher icon are documented in [chat-interactions.md](chat-interactions.md).
 
-- Migrations 003–004 add accounts, active devices, unique connection pairs, conversations, membership periods, invitations, ordered messages, read positions, blocks, reports, delivery events, deletion jobs, short-lived socket tickets, and database-backed request throttles. Existing profiles and preferences remain intact.
+- Migrations 003–006 add accounts, active devices, unique connection pairs, conversations, membership periods, invitations, ordered messages, replies, read positions, blocks, reports, delivery events, deletion jobs, short-lived socket tickets, and database-backed request throttles. Migration 006 creates the ticket table for databases that already applied 003. Existing profiles and preferences remain intact.
 - Clerk signatures, issuer, expiry and origin are verified. The backend checks that the session is active, belongs to the caller, and has an approved verified Google email. Approval still comes from administrator-owned Clerk Public metadata; no custom JWT approval claim is configured.
 - Activating a newer Clerk session replaces the backend device/session. Older sessions cannot reactivate themselves, read API data, or mutate records. Account and device checks run again inside write transactions. The pilot admits at most 20 approved active accounts.
 - Exact-username lookup, requests, acceptance/decline/cancellation, disconnection, and direct conversation creation are persisted. Direct messages require an accepted, unblocked connection. One direct conversation exists per unordered pair.
@@ -30,14 +30,16 @@ Development realtime is deployed at `https://nimqulo-realtime-dev.nimqulo-realti
 
 `realtime/wrangler.jsonc` declares a separate, unconfigured `pilot` Worker environment. EAS `preview` uses `APP_VARIANT=pilot`; `app.config.js` refuses test Clerk keys, the development API URL, missing Firebase configuration, or a service-account JSON supplied as Android public configuration. It does not silently fall back to development.
 
+Set `env.pilot.vars.API_URL` to the separate pilot API before deployment. Its explicit empty value currently keeps the Worker unavailable instead of using development. To upload the pilot service key, load that environment's `REALTIME_SERVICE_KEY` locally and run `node --env-file=<pilot-env-file> scripts/push-realtime-secret.cjs --env=pilot`. Omitting `--env` retains the development target; `--local` remains supported. No pilot API or key has been provisioned by this configuration change.
+
 Before pilot release, create a separate Clerk production instance and Neon pilot branch/project, deploy the backend and coordinator with distinct secrets, and set the preview environment's public Clerk/API values. Preserve invite-only Google access, the strict approval metadata policy, and operator IDs. Do not copy development sessions, QA records, or development push tokens into the pilot.
 
 The local Firebase Android `google-services.json` has been validated for `com.jeeva.nimqulo`; it remains ignored by Git and is included in the EAS native build. The owner uploaded the private FCM V1 key directly to EAS. No private service-account file is required in the application. Development build [f16adc7d-8a44-49e4-bb77-77f564456fa4](https://expo.dev/accounts/justjeevan.01/projects/Triply-ai/builds/f16adc7d-8a44-49e4-bb77-77f564456fa4) succeeded and is installed on Pixel 8. The APK and previous recovery APK are saved under `D:\Nimqulo-builds` because C: ran out of space during download. An OTA JavaScript update cannot add native Firebase configuration. See [Expo's FCM V1 setup](https://docs.expo.dev/push-notifications/fcm-credentials/) for credential maintenance.
 
 ## Validation
 
-- `npm test`: 25 passing tests, including authorization, sign-out failure handling, profile/media ownership and message reconciliation.
-- `MESSENGER_TEST_HOST=<isolated-direct-host> npm run test:messenger`: migration and 14 passing Postgres tests. The runner refuses the application's database host; fixtures run in a temporary schema on the isolated branch.
+- `npm test`: 28 passing tests, including authorization, sign-out failure handling, profile/media ownership and message reconciliation.
+- `MESSENGER_TEST_HOST=<isolated-direct-host> npm run test:messenger`: migration and 16 passing Postgres tests. The runner refuses the application's database host; fixtures run in a temporary schema on the isolated branch.
 - `npm run test:realtime`: 5 passing coordinator tests covering forged/reused tickets, identity scoping, expiry and rejected socket writes.
 - `npm run lint`, `npm run typecheck`, `npx expo-doctor`: passed; Expo diagnostics passed 20/20 checks.
 - `npm run build` passed: `Android Bundled` (1,983 modules), `Exported: dist`, and `Backend build passed (Node.js 24)`.

@@ -41,7 +41,7 @@ Run `npx expo start` for local development. For a reliable native redirect, use 
 
 1. While signed out, open `/home` and confirm the sign-in screen appears.
 2. Select **Continue with Google**. Cancel and confirm the button becomes available again without an error.
-3. Select a Google account with Public metadata `approved: true`. Confirm profile setup opens immediately. Press Confirm without filling any fields and verify Chats Home opens.
+3. Select a Google account with Public metadata `approved: true`. Confirm profile setup opens immediately. Enter a valid display name and username (3–24 letters, numbers, or underscores), press Confirm, and verify Chats Home opens. Use the existing username when confirming a returning account.
 4. Reload the web page or restart the native app. Confirm the session is restored.
 5. Select **Sign out** and confirm the sign-in screen appears and `/home` is inaccessible.
 6. Sign in to an account with no approval flag (or `approved: false`) and confirm Access Required appears. Opening `/home` or `/profile-setup` directly must not bypass it. Also try a non-invited account and confirm the configured Clerk sign-up policy rejects it.
