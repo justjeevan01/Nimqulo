@@ -59,7 +59,7 @@ export function StatusScreen({
   const pending = useRef(false);
   const c = content[kind];
   if (!l.ready) return <View style={ui.root} />;
-  async function run(action: () => Promise<void>) {
+  async function run(action: () => Promise<void>, source: "primary" | "secondary") {
     if (pending.current) return;
     pending.current = true;
     setBusy(true);
@@ -68,7 +68,7 @@ export function StatusScreen({
       await action();
     } catch {
       setError(
-        kind === "suspended"
+        kind === "suspended" && source === "primary"
           ? "Email jeevanofficial1120@gmail.com for help."
           : "Could not complete this action. Please try again.",
       );
@@ -157,7 +157,7 @@ export function StatusScreen({
             disabled={busy}
             icon={c.icon}
             onPress={() => {
-              void run(onAction);
+              void run(onAction, "primary");
             }}
           />
           {!!c.secondary && onSecondary && (
@@ -166,7 +166,7 @@ export function StatusScreen({
               label={c.secondary}
               disabled={busy}
               onPress={() => {
-                void run(onSecondary);
+                void run(onSecondary, "secondary");
               }}
             />
           )}

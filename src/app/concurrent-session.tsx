@@ -1,18 +1,11 @@
-import { useClerk } from "@clerk/expo";
-import { router } from "expo-router";
+import { useAppSignOut } from "@/hooks/use-app-sign-out";
 import { StatusScreen } from "@/components/safety/status-screen";
 export default function StatusRoute() {
-  const { signOut } = useClerk();
-  async function signIn() {
-    await signOut();
-    router.replace("/");
-  }
+  const { signOut } = useAppSignOut();
   return (
     <StatusScreen
       kind="session"
-      onAction={async () => {
-        await signIn();
-      }}
+      onAction={signOut}
     />
   );
 }
