@@ -1,3 +1,5 @@
+> Route cleanup: historical `/design-preview/*` URLs below have been removed. The app now uses the authenticated routes documented in [app-routes.md](app-routes.md).
+
 # Direct message screen
 
 The screen lives at `/messages/[id]` under the approved app group, outside the tabs layout so the tab bar is hidden. Chat Home opens this route for direct conversations. Authentication and admin approval still apply.

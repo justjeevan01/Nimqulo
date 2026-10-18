@@ -47,7 +47,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --experimental-strip-types --test tests/access.test.cjs tests/svg.test.cjs"
+    "test": "node --experimental-strip-types --test tests/access.test.cjs tests/svg.test.cjs tests/sign-out.test.cjs"
   },
   "private": true
 }

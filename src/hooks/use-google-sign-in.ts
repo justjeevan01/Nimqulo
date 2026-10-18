@@ -6,7 +6,7 @@ import * as WebBrowser from "expo-web-browser";
 import { router } from "expo-router";
 
 export function useGoogleSignIn() {
-  const { isLoaded } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const { startSSOFlow } = useSSO();
   const pending = useRef(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -19,7 +19,7 @@ export function useGoogleSignIn() {
   }, []);
 
   const signIn = async () => {
-    if (!isLoaded || pending.current) return;
+    if (!isLoaded || isSignedIn || pending.current) return;
     pending.current = true;
     setIsSigningIn(true);
     setError(null);
@@ -54,5 +54,5 @@ export function useGoogleSignIn() {
     }
   };
 
-  return { signIn, isReady: isLoaded, isSigningIn, error };
+  return { signIn, isReady: isLoaded && !isSignedIn, isSigningIn, error };
 }

@@ -1,3 +1,5 @@
+> Current routing: duplicate preview routes and empty app wrappers were consolidated into one authenticated route tree. See [app-routes.md](app-routes.md). The implementation and validation notes below describe earlier work.
+
 # Groups, invitations, and settings
 
 The new approved app routes are `/create-group`, `/group-details/[id]`, `/invitations`, and `/privacy-and-safety`; Settings remains the third tab. Detail screens sit outside the tabs navigator. The existing Clerk identity and admin approval guard remains in effect. Profile setup is still UI-only.
@@ -16,7 +18,7 @@ People's Invitations control opens the invitation screen, which separates pendin
 
 A shared development-only provider stores groups, membership roles, invitations/history, blocked sample users, and preference selections in memory. Created and accepted groups appear in the same Home conversation list and survive tab navigation. New groups begin with no message history; preview sends still fail explicitly rather than pretending delivery. Refresh resets preview state. The Create Group reference uses its own connected-contact scenario so the existing social preview's pending requests remain disconnected. Other sample status and search/report behavior are preserved.
 
-There is no group, invitation, discovery, reporting, notification delivery, or theme persistence backend yet. Protected group/invitation routes therefore use empty data and disable operations requiring a backend. Appearance and notification choices are local UI selections; they do not change OS settings or implement light-mode styling. The account owner's actual name/photo are used in live Settings. Support opens `mailto:jeevanofficial1120@gmail.com` only after a tap. Development sign-out exits the preview without making account requests.
+There is no group, invitation, discovery, reporting, notification delivery, or theme persistence backend yet. Protected group/invitation routes therefore use empty data and disable operations requiring a backend. Appearance and notification choices are local UI selections; they do not change OS settings or implement light-mode styling. The account owner's actual name/photo are used in live Settings. Support opens `mailto:jeevanofficial1120@gmail.com` only after a tap. Settings Sign Out, including in development previews, uses Clerk to end the current client session before returning to authentication. Confirmation waits for Clerk initialization, prevents duplicate requests, and allows retry after a failure. Cancel leaves the session unchanged. Successful sign-out clears the current navigation stack before replacing it with authentication.
 
 ## Visual verification
 
@@ -30,3 +32,20 @@ Five native screenshot comparison passes were reviewed. The final clean captures
 ## Settings profile navigation
 
 The profile card opens `/profile` (or `/design-preview/profile`) to view the current user and returns to Settings. This view reuses the existing profile layout without message, connection, block or report actions for yourself. It does not write profile data. `/profile-setup` remains the onboarding route after fresh sign-in.
+
+
+## Integration review
+
+Production Create Group buttons in Home and People, and Invitations in People, are disabled while their real data/mutation services are absent. Direct production create/invitation routes return to People. Development previews retain their working in-memory callbacks.
+
+Privacy reporting is disabled if there are no selectable people or no report/open-report callback. Production reporting remains unimplemented: there is no person-directory lookup or moderation service to resolve a route ID and record a report. The production ReportRoute back behavior is preserved; the development reporting route continues to resolve targets and record reasons only in preview state.
+
+Group previews resolve an explicit ID, and default to Weekend Crew only when neither ID nor name is supplied. Name-only links preserve the supplied name without guessing a group ID. Unknown groups retain their supplied name and have no borrowed member roster or conversation history. Accepted invitations have unavailable membership rather than inheriting Weekend Crew's members; their member count and editing actions remain unavailable until a roster exists. The preview save operation also rejects editing unknown membership.
+
+### Sign-out workflow
+
+The authentication screen renders while Clerk initializes; protected app screens still wait for identity and approval. The Google sign-in control remains unavailable until the signed-out client is ready. Sign-out unit tests cover delayed revocation, repeated taps, failure/retry, and client readiness.
+
+Validation for the sign-out change: lint, typecheck, and all nine unit tests passed. Browser checks verified Cancel, one actual Clerk signOut SDK call on confirmation, return to authentication, signed-out Home protection, and authentication rendering with Clerk requests blocked. The community browser regression passed. Pixel 8 checks verified Cancel and the authentication destination; Clerk remained uninitialized in the emulator, so live authenticated native revocation and its Back history were not exercised. Captures: `visual-review/sign-out-confirm-native.png` and `visual-review/sign-out-auth-native.png`.
+
+Development onboarding now continues from protected `/home` into `/design-preview/chats`, restoring the populated reference conversations, plus button, and connected UI screens after profile confirmation. The sign-in and approval guards still run before this onboarding path. Release Home remains separate from sample data until a messaging backend exists.

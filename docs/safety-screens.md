@@ -1,3 +1,5 @@
+> Route cleanup: historical `/design-preview/*` URLs below have been removed. The app now uses the authenticated routes documented in [app-routes.md](app-routes.md).
+
 # Safety and account screens
 
 The five supplied references are implemented in `src/components/safety/`, using the four supplied transparent illustrations from `assets/safety/`. Typography uses the existing Inter font and mobile scale. Content scrolls on small screens; the deletion form avoids the keyboard.
@@ -18,7 +20,7 @@ User profile reporting opens the new reason-selection screen. Privacy & Safety l
 
 - Reporting requires one of six reasons and a confirmation. A success state appears only after the persistence callback returns `true`. Preview reports use the existing in-memory social context; unknown users cannot submit.
 - Deletion requires exactly `DELETE` and a second confirmation. The preview callback deliberately performs no account mutation and its completion message states that no account was deleted. Actual deletion remains disabled until an account-data deletion callback is provided; deleting only a Clerk identity would not satisfy the data-removal promises in the reference.
-- Suspension support opens `mailto:jeevanofficial1120@gmail.com`. Application sign-in actions use Clerk sign-out before returning to authentication. Development preview actions never change an actual Clerk session.
+- Suspension support opens `mailto:jeevanofficial1120@gmail.com`. Application sign-in actions use Clerk sign-out before returning to authentication. Status-screen preview actions do not change an actual Clerk session. Settings Sign Out is an explicit exception: it ends the current Clerk client session before returning to authentication.
 - Offline Retry returns to the previous application route (or authentication if opened directly); Settings opens Android wireless settings, iOS app settings, or app settings in the browser preview. These are UI routes, not automatic connectivity detection. The reference copy about automatic message delivery describes the intended future messaging behavior; an offline message queue is not implemented.
 - Status routes render even before Clerk finishes loading, so an authentication-loading spinner cannot conceal these pages. Protected account routes still require identity and approval.
 - Suspension detection and concurrent-session enforcement are not added or inferred from client-editable metadata. Their event sources must navigate to the respective status route when backend/session integration is implemented.

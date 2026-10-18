@@ -1,3 +1,5 @@
+> Route cleanup: historical `/design-preview/*` URLs below have been removed. The app now uses the authenticated routes documented in [app-routes.md](app-routes.md).
+
 # Profile setup
 
 `/profile-setup` requires a signed-in, admin-approved account (`user.publicMetadata.approved === true`). Every fresh Google sign-in routes approved users here. Unapproved accounts go to Access Required.

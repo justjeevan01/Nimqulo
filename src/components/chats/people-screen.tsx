@@ -14,7 +14,7 @@ export function PeopleScreen({people=[],onSearch,onRequests,onInvitations,onCrea
    <View style={{flexDirection:"row",gap:8*s,marginTop:13*s,marginBottom:17*s}}>
     <Action l={l} label="Connections" blue={!invites} style={{flex:1.16,height:41*s,paddingHorizontal:2}} onPress={()=>setInvites(false)}/>
     <Action l={l} label="Requests" style={{flex:1,height:41*s,paddingHorizontal:2}} onPress={onRequests}/>
-    <Action l={l} label="Invitations" blue={invites} style={{flex:1.03,height:41*s,paddingHorizontal:2}} onPress={()=>{if(onInvitations)onInvitations();else setInvites(true);}}/>
+    <Action l={l} label="Invitations" disabled={!onInvitations} blue={invites} style={{flex:1.03,height:41*s,paddingHorizontal:2}} onPress={()=>{if(onInvitations)onInvitations();else setInvites(true);}}/>
    </View>
   </View>
   <FlatList data={invites?[]:people} keyExtractor={person=>person.id} showsVerticalScrollIndicator={false} contentContainerStyle={{paddingHorizontal:10*s,paddingBottom:20*s,gap:7*s,flexGrow:1}} renderItem={({item})=><Pressable accessibilityRole="button" accessibilityLabel={`View ${item.name}'s profile`} onPress={()=>onProfile?.(item)}>

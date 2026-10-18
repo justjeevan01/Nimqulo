@@ -2,7 +2,7 @@ import { DarkTheme, ThemeProvider } from "expo-router";
 import { NativeTabs } from "expo-router/native-tabs";
 
 // iOS owns the native tab bar, including Liquid Glass on iOS 26+.
-export function AppTabs({ chatsRoute = "home" }: { chatsRoute?: "home" | "chats" }) {
+export function AppTabs() {
   return <ThemeProvider value={DarkTheme}>
     <NativeTabs
       backBehavior="initialRoute"
@@ -15,7 +15,7 @@ export function AppTabs({ chatsRoute = "home" }: { chatsRoute?: "home" | "chats"
       disableTransparentOnScrollEdge
       minimizeBehavior="never"
     >
-      <NativeTabs.Trigger name={chatsRoute} contentStyle={{ backgroundColor: "#020B18" }} disableAutomaticContentInsets>
+      <NativeTabs.Trigger name="home" contentStyle={{ backgroundColor: "#020B18" }} disableAutomaticContentInsets>
         <NativeTabs.Trigger.Icon sf={{ default: "bubble.left", selected: "bubble.left.fill" }} md="chat_bubble" />
         <NativeTabs.Trigger.Label>Chats</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>

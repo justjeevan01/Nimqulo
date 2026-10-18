@@ -1,3 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { CreateGroupScreen } from "@/components/community/create-group-screen";
-export default function CreateGroupRoute(){return <CreateGroupScreen onBack={()=>router.canGoBack()?router.back():router.replace("/people")}/>;}
+import { groupContacts, useCommunity } from "@/state/community-fixtures";
+export default function CreateGroupRoute(){const {id}=useLocalSearchParams<{id?:string}>();const state=useCommunity();const existing=state.groups.find(group=>group.id===id);return <CreateGroupScreen key={id||"new"} people={groupContacts} initialName={existing?.name||"Weekend Crew"} initialSelected={existing?.members.map(member=>member.person.id)||groupContacts.slice(0,5).map(person=>person.id)} initialImage={existing?.avatar} editing={!!id} onBack={()=>router.canGoBack()?router.back():router.replace("/people")} onSave={(name,ids,image)=>{const group=state.saveGroup(name,ids,image,id);if(!group)return false;router.replace({pathname:"/group-details/[id]",params:{id:group.id}});return true;}}/>;}

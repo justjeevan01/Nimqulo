@@ -32,8 +32,7 @@ function GlassButton({ label, isFocused, ...props }: GlassButtonProps) {
   </Pressable>;
 }
 
-export function GlassTabs({ chatsRoute = "home" }: { chatsRoute?: "home" | "chats" }) {
-  const preview = chatsRoute === "chats";
+export function GlassTabs() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const target = useRef<ComponentRef<typeof View> | null>(null);
@@ -57,9 +56,9 @@ export function GlassTabs({ chatsRoute = "home" }: { chatsRoute?: "home" | "chat
   }, [cellWidth, selected, reduceMotion, position]);
   return <Tabs options={{ backBehavior: "initialRoute" }} style={styles.root}>
     <TabList style={{ display: "none" }}>
-      <TabTrigger name={chatsRoute} href={preview ? "/design-preview/chats" : "/home"} />
-      <TabTrigger name="people" href={preview ? "/design-preview/people" : "/people"} />
-      <TabTrigger name="settings" href={preview ? "/design-preview/settings" : "/settings"} />
+      <TabTrigger name="home" href="/home" />
+      <TabTrigger name="people" href="/people" />
+      <TabTrigger name="settings" href="/settings" />
     </TabList>
     <BlurTarget ref={target} style={styles.root} collapsable={false}>
       <TabSlot style={styles.root} />
@@ -71,7 +70,7 @@ export function GlassTabs({ chatsRoute = "home" }: { chatsRoute?: "home" | "chat
           <Image source={sheen} style={StyleSheet.absoluteFill} contentFit="fill" accessible={false} pointerEvents="none" />
           {cellWidth > 0 && <Animated.View pointerEvents="none" style={[styles.selection, { width: cellWidth, transform: [{ translateX: position }] }]} />}
           <View style={styles.list}>
-            <TabTrigger name={chatsRoute} asChild><GlassButton label="Chats" /></TabTrigger>
+            <TabTrigger name="home" asChild><GlassButton label="Chats" /></TabTrigger>
             <TabTrigger name="people" asChild><GlassButton label="People" /></TabTrigger>
             <TabTrigger name="settings" asChild><GlassButton label="Settings" /></TabTrigger>
           </View>

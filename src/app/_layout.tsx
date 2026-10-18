@@ -4,7 +4,7 @@ import { ClerkProvider, useAuth, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { ActivityIndicator, View } from "react-native";
 import * as WebBrowser from "expo-web-browser";
-import { isAccountApproved } from "@/lib/access";
+import { getPostSignInRoute, isAccountApproved } from "@/lib/access";
 
 // The web popup also loads this layout when it redirects to /sso-callback.
 WebBrowser.maybeCompleteAuthSession();
@@ -15,17 +15,17 @@ function AuthNavigator() {
   const pathname = usePathname();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const { user, isLoaded: userLoaded } = useUser();
-  const isDesignPreview = __DEV__ && (pathname === "/design-preview" || pathname.startsWith("/design-preview/"));
   const isStatusScreen = ["/offline", "/account-suspended", "/concurrent-session"].includes(pathname);
+  const isSignInScreen = pathname === "/";
   // Status pages contain no account data and must render even while Clerk is offline.
   // Resolve both identity and admin approval before mounting any protected screen.
-  if ((!authLoaded || !userLoaded) && !isDesignPreview && !isStatusScreen) return <View style={{ flex: 1, backgroundColor: "#020B18", alignItems: "center", justifyContent: "center" }}><ActivityIndicator color="#008BFF" /></View>;
+  if ((!authLoaded || !userLoaded) && !isStatusScreen && !isSignInScreen) return <View style={{ flex: 1, backgroundColor: "#020B18", alignItems: "center", justifyContent: "center" }}><ActivityIndicator color="#008BFF" /></View>;
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#020B18" } }}>
-      <Stack.Protected guard={!isSignedIn}>
+      <Stack.Protected guard={!authLoaded || !userLoaded || !isSignedIn} redirectTo={getPostSignInRoute(user)}>
         <Stack.Screen name="index" />
       </Stack.Protected>
-      <Stack.Protected guard={!!isSignedIn && isAccountApproved(user)}>
+      <Stack.Protected guard={authLoaded && userLoaded && !!isSignedIn && isAccountApproved(user)}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>
       <Stack.Screen name="access-required" />

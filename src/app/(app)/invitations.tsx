@@ -1,3 +1,4 @@
 import { router } from "expo-router";
 import { InvitationsScreen } from "@/components/community/invitations-screen";
-export default function InvitationsRoute(){return <InvitationsScreen onBack={()=>router.dismissTo("/people")}/>;}
+import { useCommunity } from "@/state/community-fixtures";
+export default function InvitationsRoute(){const state=useCommunity();return <InvitationsScreen invitations={state.invitations} onBack={()=>router.dismissTo("/people")} onDecision={state.decideInvitation}/>;}

@@ -1,3 +1,5 @@
+> Route cleanup: historical `/design-preview/*` URLs below have been removed. The app now uses the authenticated routes documented in [app-routes.md](app-routes.md).
+
 # Group chat and People screens
 
 The approved app routes are `/people`, `/find-people`, `/connection-requests`, `/profiles/[id]`, and `/groups/[id]`. The four detail screens live outside the tabs navigator. Authentication and the existing admin approval guard remain required. No packages or native rebuilds were added.
