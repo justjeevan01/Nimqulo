@@ -1,15 +1,19 @@
 import { randomUUID } from "node:crypto";
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { Pool, PoolClient } from "pg";
 import { ServiceError, validId, validText, type Identity, type PersonRecord, type MessageRecord, type Snapshot } from "./messenger-types.ts";
 
 type DB = Pick<PoolClient, "query">;
 const pair = (a: string, b: string) => [a, b].sort();
-const person = (r: Record<string, unknown>): PersonRecord => ({ id: String(r.user_id), name: String(r.display_name), username: String(r.username), connected: r.connected === true, blocked: r.blocked === true, requested: r.requested === true });
+const person = (r: Record<string, unknown>): PersonRecord => ({ id: String(r.user_id), name: String(r.display_name), username: String(r.username), connected: r.connected === true, blocked: r.blocked === true, requested: r.requested === true, ...(typeof r.avatar_url==="string"?{avatar:{uri:r.avatar_url}}:{}) });
 
 // All pilot mutations share a transaction lock. This also makes event cursor
 // order match commit order; sequence allocation alone does not provide that.
 export class MessengerStore {
-  constructor(readonly pool: Pool, readonly operators: readonly string[] = []) {}
+  readonly session = new AsyncLocalStorage<Identity>();
+  readonly pool: Pool;
+  readonly operators: readonly string[];
+  constructor(pool: Pool, operators: readonly string[] = []) { this.pool=pool; this.operators=operators; }
   async transaction<T>(action: (db: PoolClient) => Promise<T>): Promise<T> {
     const db = await this.pool.connect();
     try {
@@ -26,19 +30,25 @@ export class MessengerStore {
     for (const id of new Set(users)) await db.query("INSERT INTO nimqulo_events(user_id,kind,conversation_id,message_id,push_done) VALUES($1,$2,$3,$4,$5)", [id, kind, conversation || null, message || null, kind !== "message"]);
   }
   async account(db: DB, id: string) {
+    const identity=this.session.getStore();
+    const acting=!identity||identity.id===id;
     const { rows: [row] } = await db.query("SELECT * FROM nimqulo_accounts WHERE user_id=$1", [id]);
-    if (!row || !row.approved) throw new ServiceError(403, "Access requires administrator approval.", "NOT_APPROVED");
-    if (row.status !== "active") throw new ServiceError(403, row.status === "suspended" ? "Your account is suspended." : "This account is being deleted.", row.status === "suspended" ? "SUSPENDED" : "ACCOUNT_DELETED");
+    if (!row) throw new ServiceError(403, acting?"Access requires administrator approval.":"This person is unavailable.", acting?"NOT_APPROVED":"PERSON_UNAVAILABLE");
+    if (row.status !== "active") throw new ServiceError(403, acting?(row.status === "suspended" ? "Your account is suspended." : "This account is being deleted."):"This person is unavailable.", acting?(row.status === "suspended" ? "SUSPENDED" : "ACCOUNT_DELETED"):"PERSON_UNAVAILABLE");
+    if (!row.approved) throw new ServiceError(403, acting?"Access requires administrator approval.":"This person is unavailable.", acting?"NOT_APPROVED":"PERSON_UNAVAILABLE");
+    if(identity?.id===id&&!(await db.query("SELECT 1 FROM nimqulo_devices WHERE user_id=$1 AND session_id=$2",[id,identity.sessionId])).rowCount)throw new ServiceError(409,"Your account is active on another phone.","SESSION_REPLACED");
   }
   async authorize(identity: Identity, activate?: string) {
     if (!identity.sessionId || !identity.sessionStarted) throw new ServiceError(401, "Please sign in again.");
     if (activate) validId(activate);
     return this.transaction(async db => {
-      await db.query("INSERT INTO nimqulo_accounts(user_id,approved) VALUES($1,$2) ON CONFLICT(user_id) DO UPDATE SET approved=EXCLUDED.approved", [identity.id, identity.approved]);
+      await db.query("INSERT INTO nimqulo_accounts(user_id,approved,avatar_url) VALUES($1,$2,$3) ON CONFLICT(user_id) DO UPDATE SET approved=CASE WHEN nimqulo_accounts.status='active' THEN EXCLUDED.approved ELSE false END,avatar_url=EXCLUDED.avatar_url", [identity.id, identity.approved,identity.avatarUrl||null]);
+      const {rows:[pilot]}=await db.query("SELECT count(*)::int AS n FROM nimqulo_accounts WHERE approved AND status='active'");
+      if(pilot.n>20)throw new ServiceError(403,"The pilot has reached its 20-person limit.","PILOT_FULL");
       await this.account(db, identity.id);
       const { rows: [device] } = await db.query("SELECT * FROM nimqulo_devices WHERE user_id=$1 FOR UPDATE", [identity.id]);
       if (activate) {
-        if (device && (Number(device.session_started) > identity.sessionStarted! || (device.session_id === identity.sessionId && device.device_id !== activate))) throw new ServiceError(409, "Your account is active on another phone.", "SESSION_REPLACED");
+        if (device && ((device.session_id!==identity.sessionId && Number(device.session_started) >= identity.sessionStarted!) || (device.session_id === identity.sessionId && device.device_id !== activate))) throw new ServiceError(409, "Your account is active on another phone.", "SESSION_REPLACED");
         const changed = device && (device.session_id !== identity.sessionId || device.device_id !== activate);
         await db.query(`INSERT INTO nimqulo_devices(user_id,session_id,session_started,device_id) VALUES($1,$2,$3,$4)
           ON CONFLICT(user_id) DO UPDATE SET session_id=EXCLUDED.session_id,session_started=EXCLUDED.session_started,device_id=EXCLUDED.device_id,
@@ -59,6 +69,7 @@ export class MessengerStore {
     await this.account(db,b);
   }
   async member(db: DB, user: string, conversation: string) {
+    await this.account(db,user);
     validId(conversation);
     const { rows: [row] } = await db.query(`SELECT m.*, c.kind,c.name,c.next_seq FROM nimqulo_memberships m JOIN nimqulo_conversations c ON c.id=m.conversation_id
       WHERE m.conversation_id=$1 AND m.user_id=$2 AND m.end_seq IS NULL`, [conversation,user]);
@@ -72,8 +83,9 @@ export class MessengerStore {
     return this.transaction(async db=>{await this.account(db,user); return action(db);});
   }
   async lookup(user: string, username: string) {
+    await this.account(this.pool,user);
     if (!/^[a-z0-9_]{3,24}$/.test(username.toLowerCase())) return [];
-    const { rows } = await this.pool.query(`SELECT p.* FROM nimqulo_profiles p JOIN nimqulo_accounts a USING(user_id)
+    const { rows } = await this.pool.query(`SELECT p.*,a.avatar_url FROM nimqulo_profiles p JOIN nimqulo_accounts a USING(user_id)
       WHERE p.username=$1 AND p.user_id<>$2 AND a.approved AND a.status='active'
       AND NOT EXISTS(SELECT 1 FROM nimqulo_blocks b WHERE (b.owner_id=$2 AND b.target_id=p.user_id) OR (b.target_id=$2 AND b.owner_id=p.user_id))`, [username.toLowerCase(),user]);
     return rows.map(person);
@@ -185,38 +197,57 @@ export class MessengerStore {
       await this.event(db,audience,"group",id);
     });
   }
-  async messageRecord(db:DB,id:string):Promise<MessageRecord> {
-    const {rows:[r]}=await db.query(`SELECT m.*,p.display_name,p.username FROM nimqulo_messages m LEFT JOIN nimqulo_profiles p ON p.user_id=m.author_id WHERE m.id=$1`,[id]);
-    return {id:r.id,conversationId:r.conversation_id,authorId:r.author_id,retryId:r.retry_id,seq:Number(r.seq),text:r.deleted?"Message deleted":r.body,deleted:r.deleted,createdAt:new Date(r.created_at).toISOString(),sender:person({user_id:r.author_id,display_name:r.display_name||"Deleted account",username:r.username||""})};
+  async messageRecord(db:DB,id:string,viewer:string):Promise<MessageRecord> {
+    const {rows:[r]}=await db.query(`SELECT m.*,p.display_name,p.username,a.avatar_url,
+      original.seq AS reply_seq,original.body AS reply_body,original.deleted AS reply_deleted,original.author_id AS reply_author,op.display_name AS reply_name,
+      membership.start_seq AS viewer_start,receipts.total,receipts.seen
+      FROM nimqulo_messages m LEFT JOIN nimqulo_profiles p ON p.user_id=m.author_id LEFT JOIN nimqulo_accounts a ON a.user_id=m.author_id
+      LEFT JOIN nimqulo_messages original ON original.id=m.reply_to_id LEFT JOIN nimqulo_profiles op ON op.user_id=original.author_id
+      LEFT JOIN nimqulo_memberships membership ON membership.conversation_id=m.conversation_id AND membership.user_id=$2 AND membership.end_seq IS NULL
+      LEFT JOIN LATERAL(SELECT count(*)::int AS total,count(*) FILTER(WHERE read_seq>=m.seq)::int AS seen FROM nimqulo_memberships recipients
+        WHERE recipients.conversation_id=m.conversation_id AND recipients.user_id<>m.author_id AND recipients.start_seq<=m.seq AND (recipients.end_seq IS NULL OR recipients.end_seq>=m.seq)) receipts ON true
+      WHERE m.id=$1`,[id,viewer]);
+    const hidden=r.deleted||r.reply_deleted||!r.viewer_start||Number(r.reply_seq)<Number(r.viewer_start);
+    return {id:r.id,conversationId:r.conversation_id,authorId:r.author_id,retryId:r.retry_id,seq:Number(r.seq),text:r.deleted?"Message deleted":r.body,deleted:r.deleted,createdAt:new Date(r.created_at).toISOString(),sender:person({user_id:r.author_id,display_name:r.display_name||"Deleted account",username:r.username||"",avatar_url:r.avatar_url}),readBy:r.seen,recipientCount:r.total,
+      ...(!r.deleted&&r.reply_to_id?{reply:{id:r.reply_to_id,authorId:hidden?"":r.reply_author,name:hidden?"Message":r.reply_name||"Deleted account",text:hidden?"Original message unavailable":String(r.reply_body).slice(0,240),...(hidden?{unavailable:true}:{})}}:{})};
   }
-  async send(user:string,id:string,text:string,retryId:string) {
+  async send(user:string,id:string,text:string,retryId:string,replyToId?:string) {
     validText(text);validId(retryId);
+    if(replyToId!==undefined)validId(replyToId);
     return this.mutate(user,async db=>{
       const member=await this.member(db,user,id);
       if(member.kind==="direct") {const peers=(await this.members(db,id)).filter(who=>who!==user);if(peers.length!==1)throw new ServiceError(403,"Conversation unavailable.");await this.connected(db,user,peers[0]);}
       const {rows:[existing]}=await db.query("SELECT * FROM nimqulo_messages WHERE author_id=$1 AND retry_id=$2",[user,retryId]);
-      if(existing){if(existing.conversation_id!==id||(!existing.deleted&&existing.body!==text))throw new ServiceError(409,"Retry identifier already used.");return this.messageRecord(db,existing.id);}
+      if(existing){if(existing.conversation_id!==id||(!existing.deleted&&(existing.body!==text||existing.reply_to_id!==(replyToId||null))))throw new ServiceError(409,"Retry identifier already used.");return this.messageRecord(db,existing.id,user);}
+      if(replyToId){const {rows:[original]}=await db.query("SELECT seq,deleted FROM nimqulo_messages WHERE id=$1 AND conversation_id=$2",[replyToId,id]);if(!original||original.deleted||Number(original.seq)<Number(member.start_seq))throw new ServiceError(403,"This message is no longer available to reply to.");}
       const {rows:[count]}=await db.query("SELECT count(*)::int AS n FROM nimqulo_messages WHERE author_id=$1 AND created_at>now()-interval '1 minute'",[user]);
       if(count.n>=30)throw new ServiceError(429,"Please wait before sending more messages.");
       const {rows:[conversation]}=await db.query("UPDATE nimqulo_conversations SET next_seq=next_seq+1 WHERE id=$1 RETURNING next_seq",[id]);
       const messageId=randomUUID();
-      await db.query("INSERT INTO nimqulo_messages(id,conversation_id,author_id,retry_id,seq,body) VALUES($1,$2,$3,$4,$5,$6)",[messageId,id,user,retryId,conversation.next_seq,text]);
+      await db.query("INSERT INTO nimqulo_messages(id,conversation_id,author_id,retry_id,seq,body,reply_to_id) VALUES($1,$2,$3,$4,$5,$6,$7)",[messageId,id,user,retryId,conversation.next_seq,text,replyToId||null]);
       for(const target of await this.members(db,id)) {
         await this.event(db,[target],target===user?"sent":"message",id,messageId);
       }
-      return this.messageRecord(db,messageId);
+      return this.messageRecord(db,messageId,user);
     });
   }
   async messages(user:string,id:string,before?:number) {
     const m=await this.member(this.pool,user,id);
     if(before!==undefined&&(!Number.isSafeInteger(before)||before<1))throw new ServiceError(400,"Invalid message cursor.");
     const {rows}=await this.pool.query("SELECT id FROM nimqulo_messages WHERE conversation_id=$1 AND seq >= $2 AND ($3::bigint IS NULL OR seq < $3) ORDER BY seq DESC LIMIT 50",[id,m.start_seq,before||null]);
-    const messages=await Promise.all(rows.reverse().map(r=>this.messageRecord(this.pool,r.id)));
+    const messages=await Promise.all(rows.reverse().map(r=>this.messageRecord(this.pool,r.id,user)));
     return {messages,before:messages.length===50?messages[0].seq:null};
+  }
+  async typingAudience(user:string,id:string){
+    const member=await this.member(this.pool,user,id);
+    if(member.kind==="direct"){const peers=(await this.members(this.pool,id)).filter(who=>who!==user);if(peers.length!==1)throw new ServiceError(403,"Conversation unavailable.");await this.connected(this.pool,user,peers[0]);}
+    const {rows}=await this.pool.query("SELECT m.user_id FROM nimqulo_memberships m JOIN nimqulo_accounts a USING(user_id) WHERE m.conversation_id=$1 AND m.end_seq IS NULL AND m.user_id<>$2 AND a.approved AND a.status='active'",[id,user]);
+    const {rows:[profile]}=await this.pool.query("SELECT display_name FROM nimqulo_profiles WHERE user_id=$1",[user]);
+    return {recipients:rows.map(r=>String(r.user_id)),name:String(profile?.display_name||"Someone")};
   }
   async read(user:string,id:string,seq:number) {
     if(!Number.isSafeInteger(seq)||seq<0)throw new ServiceError(400,"Invalid read position.");
-    return this.mutate(user,async db=>{const m=await this.member(db,user,id);await db.query("UPDATE nimqulo_memberships SET read_seq=greatest(read_seq,least($2,$3)) WHERE id=$1",[m.id,seq,m.next_seq]);});
+    return this.mutate(user,async db=>{const m=await this.member(db,user,id);const updated=await db.query("UPDATE nimqulo_memberships SET read_seq=least($2::bigint,$3::bigint) WHERE id=$1 AND read_seq<least($2::bigint,$3::bigint) RETURNING id",[m.id,seq,m.next_seq]);if(updated.rowCount)await this.event(db,await this.members(db,id),"read",id);});
   }
   async block(user:string,target:string,blocked:boolean) {
     return this.mutate(user,async db=>{
@@ -240,11 +271,14 @@ export class MessengerStore {
   }
   async device(user:string,token:string|null) {
     if(token!==null&&(typeof token!=="string"||!/^ExponentPushToken\[[\w-]+\]$|^ExpoPushToken\[[\w-]+\]$/.test(token)))throw new ServiceError(400,"Invalid push token.");
-    await this.pool.query("UPDATE nimqulo_devices SET push_token=NULL WHERE push_token=$1 AND user_id<>$2",[token,user]);
-    await this.pool.query("UPDATE nimqulo_devices SET push_token=$2,updated_at=now() WHERE user_id=$1",[user,token]);
+    return this.mutate(user,async db=>{
+      await db.query("UPDATE nimqulo_devices SET push_token=NULL WHERE push_token=$1 AND user_id<>$2",[token,user]);
+      await db.query("UPDATE nimqulo_devices SET push_token=$2,updated_at=now() WHERE user_id=$1",[user,token]);
+    });
   }
   async snapshot(user:string):Promise<Snapshot> {
-    const {rows:rows}=await this.pool.query(`SELECT p.*,r.id AS connection_id,r.status,r.requester_id,
+    await this.account(this.pool,user);
+    const {rows:rows}=await this.pool.query(`SELECT p.*,a.avatar_url,r.id AS connection_id,r.status,r.requester_id,
       EXISTS(SELECT 1 FROM nimqulo_blocks b WHERE b.owner_id=$1 AND b.target_id=p.user_id) AS blocked
       FROM nimqulo_profiles p JOIN nimqulo_accounts a USING(user_id)
       LEFT JOIN nimqulo_connections r ON r.low_id=least($1,p.user_id) AND r.high_id=greatest($1,p.user_id)
@@ -254,24 +288,25 @@ export class MessengerStore {
     const people=rows.map(r=>person({...r,connected:r.status==="accepted",requested:r.status==="pending"&&r.requester_id===user}));
     const requests=rows.filter(r=>r.status==="pending"&&!r.blocked).map(r=>({id:r.connection_id,person:people.find(p=>p.id===r.user_id)!,age:"Pending",direction:r.requester_id===user?"outgoing" as const:"incoming" as const}));
     const {rows:convs}=await this.pool.query(`SELECT c.*,m.read_seq,m.start_seq,m.role,
-      p.display_name,p.username,other.user_id AS peer_id,
+      p.display_name,p.username,peer.avatar_url,other.user_id AS peer_id,
       last.body AS last_body,last.deleted AS last_deleted,last.created_at AS last_at,
       (SELECT count(*)::int FROM nimqulo_messages msg WHERE msg.conversation_id=c.id AND msg.seq>greatest(m.read_seq,m.start_seq-1) AND msg.author_id<>$1) AS unread
       FROM nimqulo_conversations c JOIN nimqulo_memberships m ON m.conversation_id=c.id AND m.user_id=$1 AND m.end_seq IS NULL
       LEFT JOIN LATERAL(SELECT user_id FROM nimqulo_memberships WHERE conversation_id=c.id AND user_id<>$1 AND end_seq IS NULL LIMIT 1) other ON c.kind='direct'
       LEFT JOIN nimqulo_profiles p ON p.user_id=other.user_id
+      LEFT JOIN nimqulo_accounts peer ON peer.user_id=other.user_id
       LEFT JOIN LATERAL(SELECT body,deleted,created_at FROM nimqulo_messages WHERE conversation_id=c.id AND seq>=m.start_seq ORDER BY seq DESC LIMIT 1) last ON true
       ORDER BY coalesce(last.created_at,c.created_at) DESC`,[user]);
     const groups:Snapshot["groups"]=[];
     for(const c of convs.filter(c=>c.kind==="group")) {
-      const {rows:members}=await this.pool.query("SELECT p.*,m.role FROM nimqulo_memberships m LEFT JOIN nimqulo_profiles p USING(user_id) WHERE m.conversation_id=$1 AND m.end_seq IS NULL ORDER BY m.joined_at,m.user_id",[c.id]);
+      const {rows:members}=await this.pool.query("SELECT p.*,a.avatar_url,m.role FROM nimqulo_memberships m LEFT JOIN nimqulo_profiles p USING(user_id) LEFT JOIN nimqulo_accounts a ON a.user_id=m.user_id WHERE m.conversation_id=$1 AND m.end_seq IS NULL ORDER BY m.joined_at,m.user_id",[c.id]);
       groups.push({id:c.id,name:c.name,added:true,myRole:c.role,members:members.map(r=>({person:person(r),role:r.role}))});
     }
     const {rows:invitations}=await this.pool.query("SELECT i.id,c.name,p.display_name AS invited_by,i.status FROM nimqulo_invitations i JOIN nimqulo_conversations c ON c.id=i.conversation_id LEFT JOIN nimqulo_profiles p ON p.user_id=i.inviter_id WHERE i.recipient_id=$1 ORDER BY i.created_at DESC LIMIT 100",[user]);
     return {people,requests,groups,invitations:invitations.map(r=>({id:r.id,name:r.name,invitedBy:r.invited_by||"Deleted account",status:r.status})),blocked:people.filter(p=>p.blocked),
-      conversations:convs.map(c=>({id:c.id,kind:c.kind,title:c.kind==="group"?c.name:c.display_name||"Deleted account",username:c.username||undefined,peerId:c.peer_id||undefined,message:c.last_deleted?"Message deleted":c.last_body||"No messages yet",unread:c.unread,updatedAt:new Date(c.last_at||c.created_at).toISOString(),nextSeq:Number(c.next_seq)})),operator:this.operators.includes(user)};
+      conversations:convs.map(c=>({id:c.id,kind:c.kind,title:c.kind==="group"?c.name:c.display_name||"Deleted account",username:c.username||undefined,peerId:c.peer_id||undefined,...(c.avatar_url?{avatar:{uri:c.avatar_url}}:{}),message:c.last_deleted?"Message deleted":c.last_body||"No messages yet",unread:c.unread,updatedAt:new Date(c.last_at||c.created_at).toISOString(),nextSeq:Number(c.next_seq)})),operator:this.operators.includes(user)};
   }
-  async operator(user:string) {if(!this.operators.includes(user))throw new ServiceError(403,"Operator access required.");}
+  async operator(user:string) {await this.account(this.pool,user);if(!this.operators.includes(user))throw new ServiceError(403,"Operator access required.");}
   async reports(user:string) {await this.operator(user);return (await this.pool.query("SELECT r.id,r.reporter_id,r.target_id,r.reason,r.status,r.created_at,p.display_name AS target_name FROM nimqulo_reports r LEFT JOIN nimqulo_profiles p ON p.user_id=r.target_id ORDER BY r.created_at DESC LIMIT 100")).rows;}
   async moderate(user:string,reportId:string,status:"reviewed"|"dismissed",suspend:boolean) {
     await this.operator(user);validId(reportId);
@@ -313,6 +348,7 @@ export class MessengerStore {
       await db.query("DELETE FROM nimqulo_preferences WHERE user_id=$1",[user]);
       await db.query("DELETE FROM nimqulo_profiles WHERE user_id=$1",[user]);
       await db.query("DELETE FROM nimqulo_devices WHERE user_id=$1",[user]);
+      await db.query("UPDATE nimqulo_accounts SET avatar_url=NULL WHERE user_id=$1",[user]);
       await db.query("DELETE FROM nimqulo_events WHERE user_id=$1",[user]);
     });
   }

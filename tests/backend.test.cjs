@@ -2,11 +2,12 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const source = import("../backend/app.ts");
 
-async function harness() {
+async function harness(withMessenger = false) {
   const { createApp } = await source;
   const preferences = new Map(), media = new Map(), profiles = new Map();
   let touched = 0;
   const app = createApp({
+    ...(withMessenger ? { messenger: { authorize: async () => {}, session: { run: (_identity, action) => action() } } } : {}),
     async authenticate(token) { if (!["alice", "bob", "pending"].includes(token)) throw new Error("bad token"); return { id: token, approved: token !== "pending" }; },
     async getProfile(id) { return profiles.get(id) || null; },
     async saveProfile(id, value) {
@@ -37,6 +38,20 @@ test("anonymous, forged, and unapproved sessions cannot access services", async 
     assert.equal((await h.request("/profile", token)).status, token === "pending" ? 403 : 401);
     assert.equal((await h.request("/profile", token, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ displayName: "Pending", username: "pending_user", approved: true }) })).status, token === "pending" ? 403 : 401);
   }
+});
+
+test("messenger body limits cover exact and parameterized paths without limiting image uploads", async () => {
+  const h = await harness(true);
+  for (const path of ["/connections", "/groups", "/groups/123/members", "/conversations/123/messages", "/conversations/123/typing"]) {
+    assert.equal((await h.request(path, "alice", { method: "POST", body: "x".repeat(25 * 1024) })).status, 413, path);
+  }
+  assert.equal((await h.request("/profile", "alice", { method: "PUT", body: "x".repeat(2049) })).status, 413);
+  const image = Buffer.alloc(5 * 1024 * 1024);
+  image.set([137,80,78,71,13,10,26,10]);
+  const uploaded = await h.request("/media", "alice", { method: "POST", body: image });
+  assert.equal(uploaded.status, 201);
+  assert.equal(h.media.get((await uploaded.json()).id).size, image.length);
+  assert.equal((await h.request("/media", "alice", { method: "POST", body: Buffer.alloc(image.length + 1) })).status, 413);
 });
 
 test("profile setup validates names, normalizes usernames, and isolates identity", async () => {

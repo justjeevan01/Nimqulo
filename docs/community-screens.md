@@ -1,51 +1,31 @@
-> Current routing: duplicate preview routes and empty app wrappers were consolidated into one authenticated route tree. See [app-routes.md](app-routes.md). The implementation and validation notes below describe earlier work.
-
 # Groups, invitations, and settings
 
-The new approved app routes are `/create-group`, `/group-details/[id]`, `/invitations`, and `/privacy-and-safety`; Settings remains the third tab. Detail screens sit outside the tabs navigator. The existing Clerk identity and admin approval guard remains in effect. Profile setup is still UI-only.
+The Android app uses one authenticated route tree with native Chats, People, and Settings tabs. Detail screens open outside the tab navigator. Clerk sign-in and administrator approval protect these routes; the API independently checks the active session, account status, and authorization. See [app-routes.md](app-routes.md) and [messenger.md](messenger.md) for the current implementation and validation limits.
 
-Create Group is available in People and in the Home Groups filter. Its form supports a group name, square photo picker, eligible member selection, a maximum of 20 selections, and a disabled submit button when name or members are missing. Group Details shows group identity, member count/roles, Message/Add/Edit controls, member options, and a leave confirmation. The group-chat options control opens Group Details; chat typography, avatar sizing, bubble gaps, rounded system notices, and photo-scroll handling are unchanged.
+## Profile and conversations
 
-People's Invitations control opens the invitation screen, which separates pending invitations from accepted/declined history. Declining requires confirmation. Settings includes profile editing, notification and appearance preference sheets, Privacy & Safety, support email, About, and a sign-out confirmation. Live sign-out uses Clerk and displays an error if it fails. Privacy includes blocked users, an unblock confirmation, a report form, and safety guidelines. Reports use the existing callback and show success only when their selected reason was recorded.
+After a fresh sign-in, approved accounts enter `/profile-setup`; pending accounts enter `/access-required`. Enter a valid display name and username, then Confirm saves them through the authenticated API and opens protected `/home`. Usernames are unique, case-insensitive and immutable during the pilot. An already confirmed session restores to Chats after restart. Optional profile photos use Clerk.
 
-## Development previews
+Home displays the account's persisted direct and group conversations. Empty and populated chats are states of the same screen, without separate routes or fabricated conversation history. Created groups and accepted invitations update that list through the backend. Direct conversations require an accepted connection. Conversation screens load persisted, paginated messages and cache loaded history and drafts for offline use.
 
-- `/design-preview/create-group`
-- `/design-preview/group-details`
-- `/design-preview/invitations`
-- `/design-preview/settings`
-- `/design-preview/privacy-and-safety`
+## Community flows
 
-A shared development-only provider stores groups, membership roles, invitations/history, blocked sample users, and preference selections in memory. Created and accepted groups appear in the same Home conversation list and survive tab navigation. New groups begin with no message history; preview sends still fail explicitly rather than pretending delivery. Refresh resets preview state. The Create Group reference uses its own connected-contact scenario so the existing social preview's pending requests remain disconnected. Other sample status and search/report behavior are preserved.
+Create Group is available from People and the Home Groups filter when community data is ready. `/create-group` starts with an empty name and invite selection. A valid name is required; an owner-only group is permitted. Up to 19 eligible accepted connections can be invited. Blocked contacts and existing members are excluded from the invitation editor. Creating a group saves it through the API and opens its details. Group photo uploads are not implemented and their control is disabled.
 
-There is no group, invitation, discovery, reporting, notification delivery, or theme persistence backend yet. Protected group/invitation routes therefore use empty data and disable operations requiring a backend. Appearance and notification choices are local UI selections; they do not change OS settings or implement light-mode styling. The account owner's actual name/photo are used in live Settings. Support opens `mailto:jeevanofficial1120@gmail.com` only after a tap. Settings Sign Out, including in development previews, uses Clerk to end the current client session before returning to authentication. Confirmation waits for Clerk initialization, prevents duplicate requests, and allows retry after a failure. Cancel leaves the session unchanged. Successful sign-out clears the current navigation stack before replacing it with authentication.
+`/group-details/[id]` shows the actual member roster and roles. Authorized users can edit, invite connections, manage ordinary members, appoint admins, and transfer ownership. A group has at most 20 members. An owner must transfer ownership before leaving while other members remain; a sole owner can leave. Permitted leave failures show an error, and success returns to `/home`. The group's chat opens `/groups/[id]`; direct chats use `/messages/[id]`.
 
-## Visual verification
+People opens exact-username search, connection requests, user profiles, and `/invitations`. Invitation acceptance/decline is persisted; only acceptance establishes group membership. History access is restricted to the current membership period. Leaving or removal revokes access; rejoining starts a new period.
 
-Reference assets were cropped from the five supplied images; UI is implemented with React Native components and SVG decoration. Pixel 8 screenshot comparison captures are stored under the ignored `visual-review/community-*-compare-pass*.png` files. Device resolution is temporarily adjusted to match each reference aspect ratio and restored after captures. Android system chrome and the previously selected glass tabs follow the running device.
+## Settings and safety
 
-The development preview routes render without waiting for Clerk's network initialization; this is restricted to `__DEV__` preview paths. Authentication and approval are still resolved before any protected app screen mounts. Production previews remain redirected by the preview layout.
+The Settings profile card opens `/profile` to view the current account and returns to Settings; it does not restart onboarding. Settings preferences are persisted through the authenticated API, including notifications and message previews. The appearance preference is stored, but light/dark styling is excluded as requested. Notification preferences do not change Android's OS permission settings.
 
-Five native screenshot comparison passes were reviewed. The final clean captures are `visual-review/community-*-native-pass5.png` and side-by-side `visual-review/community-*-compare-pass5.png`. Native checks covered the system photo picker, member selection, keyboard entry, creation, details/roles/editing/chat navigation, invitation decisions/history, settings/privacy, unblocking, reason-preserving reports, guidelines, About, and sign-out cancellation. Browser checks additionally covered renaming/leaving existing Home groups, persistence across navigation, signed-out route guards, 320/480 px layouts, and popup-auth callback handoff. Lint, typecheck, and the six existing unit tests passed. No live Google sign-in or backend group/message delivery was exercised.
+`/privacy-and-safety` shows blocked users and supports unblocking, selecting a report target, safety guidelines, and account deletion. `/report-user` resolves a supplied user ID and submits a report with the selected reason; missing targets disable submission. Reports are persisted and available to authorized operators through `/moderation`. Deletion disables access immediately and queues retryable cleanup. Support opens `mailto:jeevanofficial1120@gmail.com` after a tap.
 
+Sign Out waits for Clerk readiness and successful session revocation, clears account-scoped caches and navigation, then returns to authentication. Failure keeps the current session screen available for retry; Cancel leaves the session unchanged.
 
-## Settings profile navigation
+## Development and verification
 
-The profile card opens `/profile` (or `/design-preview/profile`) to view the current user and returns to Settings. This view reuses the existing profile layout without message, connection, block or report actions for yourself. It does not write profile data. `/profile-setup` remains the onboarding route after fresh sign-in.
+Development uses the same protected routes and authenticated API as the app. The earlier preview-only route tree and in-memory sample providers were removed. Legacy `*-fixtures` filenames under `src/state` now wrap persisted backend operations; they do not create sample accounts, chats, or invitations.
 
-
-## Integration review
-
-Production Create Group buttons in Home and People, and Invitations in People, are disabled while their real data/mutation services are absent. Direct production create/invitation routes return to People. Development previews retain their working in-memory callbacks.
-
-Privacy reporting is disabled if there are no selectable people or no report/open-report callback. Production reporting remains unimplemented: there is no person-directory lookup or moderation service to resolve a route ID and record a report. The production ReportRoute back behavior is preserved; the development reporting route continues to resolve targets and record reasons only in preview state.
-
-Group previews resolve an explicit ID, and default to Weekend Crew only when neither ID nor name is supplied. Name-only links preserve the supplied name without guessing a group ID. Unknown groups retain their supplied name and have no borrowed member roster or conversation history. Accepted invitations have unavailable membership rather than inheriting Weekend Crew's members; their member count and editing actions remain unavailable until a roster exists. The preview save operation also rejects editing unknown membership.
-
-### Sign-out workflow
-
-The authentication screen renders while Clerk initializes; protected app screens still wait for identity and approval. The Google sign-in control remains unavailable until the signed-out client is ready. Sign-out unit tests cover delayed revocation, repeated taps, failure/retry, and client readiness.
-
-Validation for the sign-out change: lint, typecheck, and all nine unit tests passed. Browser checks verified Cancel, one actual Clerk signOut SDK call on confirmation, return to authentication, signed-out Home protection, and authentication rendering with Clerk requests blocked. The community browser regression passed. Pixel 8 checks verified Cancel and the authentication destination; Clerk remained uninitialized in the emulator, so live authenticated native revocation and its Back history were not exercised. Captures: `visual-review/sign-out-confirm-native.png` and `visual-review/sign-out-auth-native.png`.
-
-Development onboarding now continues from protected `/home` into `/design-preview/chats`, restoring the populated reference conversations, plus button, and connected UI screens after profile confirmation. The sign-in and approval guards still run before this onboarding path. Release Home remains separate from sample data until a messaging backend exists.
+Historical reference-image comparison captures remain in the ignored `visual-review` directory. Those captures document earlier UI work, not proof of current backend delivery. Current unit, isolated Postgres, coordinator, API and Pixel 8 checks are recorded in [messenger.md](messenger.md), with chat dates, replies, read receipts and typing validation in [chat-interactions.md](chat-interactions.md). Physical two-phone acceptance, the known killed-process notification issue, and pilot release setup remain outstanding there.

@@ -4,7 +4,7 @@
 
 Build an Android-only messenger for an invite-only pilot of up to 20 adults in India. Prioritize reliable private text conversations, small groups, and clear failure handling within a $0 recurring infrastructure budget.
 
-Retain Expo SDK 58, React Native 0.88, Expo Router native tabs, NativeWind, Clerk Google authentication, Neon/Postgres, and Cloudflare. Distribute signed APKs privately. Implementation is tracked in docs/phase-1.md. Phase 1 uses the subsequently requested Neon Functions backend; light/dark theme implementation is excluded at the user's request.
+Retain Expo SDK 58, React Native 0.88, Expo Router native tabs, NativeWind, Clerk Google authentication, Neon/Postgres, and Cloudflare. Distribute signed APKs privately. Foundation implementation is tracked in docs/phase-1.md; functional messenger implementation, validation and outstanding release gates are tracked in [docs/messenger.md](docs/messenger.md). Phase 1 uses the subsequently requested Neon Functions backend; light/dark theme implementation is excluded at the user's request.
 
 ## 1. Foundation and user experience
 
@@ -20,6 +20,8 @@ Status: implemented and validated, excluding light/dark themes as requested. See
 - Support screen-reader labels, scalable text, accessible touch targets, keyboard handling, loading states, and empty/error states. Light/dark appearance is excluded from Phase 1 at the user's request.
 
 ## 2. Backend, data, and authorization
+
+Status: implemented in the development API, with versioned migrations and isolated Postgres authorization/concurrency tests. A separate pilot Clerk/database deployment is still required before release.
 
 - Use the deployed Neon Functions package for authenticated HTTPS APIs, following the later Neon setup request. Cloudflare Workers with SQLite-backed Durable Objects remain the proposed live connection coordinator for Phase 2. Neon remains authoritative for application records and message history.
 - Verify Clerk tokens server-side. Require an approved Google email and the account’s active session on API calls and realtime connections.
@@ -46,6 +48,8 @@ Create versioned migrations for:
 
 ## 3. Messaging and lifecycle behavior
 
+Status: persisted messaging, groups/invitations, roles, membership boundaries, read positions, transactional delivery recovery, Cloudflare coordination, local caching and manual retry are implemented. Android FCM registration and emulator push delivery are validated; two-phone acceptance remains outstanding; see docs/messenger.md for precise validation limits.
+
 - Require an accepted connection before direct messaging. Admins may invite their accepted connections into groups; acceptance establishes membership.
 - Allow owners to appoint/demote admins and transfer ownership. Admins manage ordinary members. Owners leaving normally must transfer ownership.
 - On owner account deletion, promote the longest-serving remaining admin, otherwise the longest-serving member. Resolve ties deterministically.
@@ -60,6 +64,8 @@ Create versioned migrations for:
 
 ## 4. Safety, operations, and release
 
+Status: blocking, persisted reports, operator review/suspension, deletion jobs, throttling, payload limits and structured error handling are implemented. Pilot release remains gated on environment separation, physical-device acceptance and dependency advisory review. No pilot release has been performed.
+
 - Blocking prevents direct messages, connection requests, and new group invitations in both directions. Explain that existing shared-group messages remain visible.
 - Add reporting and an operator-only moderation screen. Restrict operator access through server configuration; support report review and account suspension.
 - Account deletion immediately disables application access, then performs retryable cleanup: erase authored text and report excerpts, remove the profile/photo, resolve group ownership, remove memberships/devices, and delete the Clerk account.
@@ -70,6 +76,8 @@ Create versioned migrations for:
 - Release manually after validation. Preserve database migrations and the previous signed APK/backend version for recovery.
 
 ## 5. Validation and acceptance
+
+Status: unit, isolated Postgres, coordinator, live API/storage/realtime, Android export and emulator checks are recorded in docs/messenger.md. Emulator background push is validated; physical-phone checks are not yet accepted.
 
 - Run lint, TypeScript checks, and Expo dependency diagnostics before release.
 - Test backend authorization, concurrent invitation acceptance, group capacity, ownership succession, history boundaries, blocking, suspension, and account deletion.
@@ -84,7 +92,7 @@ Create versioned migrations for:
 - Nimqulo is provisional; initial searches do not establish trademark, domain, or worldwide name availability.
 - NativeWind and Clerk exact package compatibility must be verified before implementation proceeds.
 - Profile photos are optional. No group-photo uploads, message attachments, calls, AI, public discovery, payments, or ads in v1.
-- No read receipts, typing indicators, or online-status display.
+- Read receipts, quoted replies and ephemeral typing indicators are supported following later feature requests; no online-status display. See docs/chat-interactions.md.
 - Standard protection applies; the app is not end-to-end encrypted.
 - Provider quotas, notification delivery, APK build availability, and backup retention impose limits on a $0 pilot.
 - Photos and voice notes are the likely v2 direction; keep message rendering extensible without building media infrastructure now.

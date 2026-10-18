@@ -32,7 +32,7 @@ const hash = bytes => createHash("sha256").update(bytes).digest("hex");
   const { createBackend } = await import("../src/lib/backend.ts");
   const api = createBackend(token);
   const original = await api.preferences();
-  const next = { appearance: original.appearance === "Dark" ? "System" : "Dark", notifications: !original.notifications };
+  const next = { ...original, appearance: original.appearance === "Dark" ? "System" : "Dark", notifications: !original.notifications };
   let uploaded;
   const client = new Client({ connectionString: process.env.DATABASE_URL_UNPOOLED, connectionTimeoutMillis: 15000 });
   await client.connect();

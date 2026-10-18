@@ -12,6 +12,7 @@ export const preferences = pgTable("nimqulo_preferences", {
   userId: text("user_id").primaryKey(),
   appearance: text("appearance").notNull().default("System"),
   notifications: boolean("notifications").notNull().default(true),
+  previews: boolean("previews").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

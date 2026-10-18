@@ -1,8 +1,11 @@
-export type Identity = { id: string; approved: boolean; sessionId?: string; sessionStarted?: number };
-export type PersonRecord = { id: string; name: string; username: string; connected: boolean; blocked: boolean; requested: boolean };
+export type Identity = { id: string; approved: boolean; sessionId?: string; sessionStarted?: number; avatarUrl?:string };
+export type PersonRecord = { id: string; name: string; username: string; connected: boolean; blocked: boolean; requested: boolean; avatar?:{uri:string} };
 export type GroupRecord = { id: string; name: string; members: { person: PersonRecord; role: "Owner" | "Admin" | "Member" }[]; added: boolean; myRole: "Owner" | "Admin" | "Member" };
-export type ConversationRecord = { id: string; kind: "direct" | "group"; title: string; username?: string; peerId?: string; message: string; unread: number; updatedAt: string; nextSeq: number };
-export type MessageRecord = { id: string; conversationId: string; authorId: string; retryId: string; seq: number; text: string; deleted: boolean; createdAt: string; sender: PersonRecord };
+export type ConversationRecord = { id: string; kind: "direct" | "group"; title: string; username?: string; peerId?: string; avatar?:{uri:string}; message: string; unread: number; updatedAt: string; nextSeq: number };
+export type MessageReply = { id:string; authorId:string; name:string; text:string; unavailable?:boolean };
+export type TypingActivity = { conversationId:string;userId:string;name:string;typing:boolean;expiresAt:number };
+export type TypingPublisher = (recipients:readonly string[],activity:TypingActivity)=>Promise<void>;
+export type MessageRecord = { id: string; conversationId: string; authorId: string; retryId: string; seq: number; text: string; deleted: boolean; createdAt: string; sender: PersonRecord; reply?:MessageReply; readBy?:number; recipientCount?:number };
 export type Snapshot = {
   people: PersonRecord[];
   requests: { id: string; person: PersonRecord; age: string; direction: "incoming" | "outgoing" }[];

@@ -1,12 +1,12 @@
 # Clerk authentication
 
-The custom Google button uses `useSSO` from `@clerk/expo`. Google remains the sign-in method; profile fields are currently display-only placeholders. The root `ClerkProvider` restores sessions using Clerk's `tokenCache` (SecureStore on native; Clerk's browser session on web). Expo Router guards the app group with both authentication and admin approval. Signing out removes access to the protected routes.
+The custom Google button uses `useSSO` from `@clerk/expo`. Google remains the sign-in method. Profile names/usernames persist through the authenticated Neon API and optional profile photos use Clerk. The root `ClerkProvider` restores Android sessions using SecureStore token/resource caches. Expo Router guards the app group with authentication and admin approval; backend authorization is enforced independently. Signing out removes protected access and clears account-scoped application caches.
 
 ## Approval and the first screen after sign-in
 
-After identity and user data finish loading, an approved account enters `/profile-setup` immediately. An unapproved account enters `/access-required`. There is no intervening welcome screen. Confirm opens `/home` without saving any profile data.
+After each fresh Google sign-in, an approved account enters `/profile-setup` immediately and an unapproved account enters `/access-required`. Confirm saves the profile and opens `/home`. A previously confirmed session restores to Chats after app restart; a new Clerk session still requires confirmation.
 
-Approval is read exclusively from `user.publicMetadata.approved === true`. Missing values, `false`, strings such as `"true"`, and any flag in editable `unsafeMetadata` deny access. Accounts cannot reach `/home` or `/profile-setup` without admin approval. The profile screen makes no account writes.
+Frontend approval is read exclusively from `user.publicMetadata.approved === true`. Missing values, `false`, strings such as `"true"`, and editable `unsafeMetadata` deny access. The backend also verifies the Clerk session, verified Google identity, approval, backend account status and active phone. Profile completion never grants approval.
 
 To approve an account, open **Clerk Dashboard → Users → the user → Metadata → Public metadata** and merge this field into its existing JSON:
 
@@ -16,7 +16,7 @@ To approve an account, open **Clerk Dashboard → Users → the user → Metadat
 
 To leave an account pending or revoke approval, set `approved` to `false` or remove it. The updated value is checked on the next sign-in/user refresh. Never put approval in Unsafe metadata, and never approve an account from mobile code. Invitations and account creation do not automatically set this field. Current accounts without the explicit flag will see Access Required.
 
-This is a client routing gate backed by admin-owned metadata, not a substitute for authorization on future backend APIs. Those APIs must independently verify identity and approval. See [Clerk's metadata trust model](https://clerk.com/docs/guides/users/extending).
+The client routing gate is backed by independent authorization on every backend API. See [messenger implementation](messenger.md) and [Clerk's metadata trust model](https://clerk.com/docs/guides/users/extending).
 
 ## Local configuration
 
@@ -41,7 +41,7 @@ Run `npx expo start` for local development. For a reliable native redirect, use 
 
 1. While signed out, open `/home` and confirm the sign-in screen appears.
 2. Select **Continue with Google**. Cancel and confirm the button becomes available again without an error.
-3. Select a Google account with Public metadata `approved: true`. Confirm profile setup opens immediately. Press Confirm without filling any fields and verify Chats Home opens.
+3. Select a Google account with Public metadata `approved: true`. Confirm profile setup opens immediately. Enter a valid display name and username (3–24 letters, numbers, or underscores), press Confirm, and verify Chats Home opens. Use the existing username when confirming a returning account.
 4. Reload the web page or restart the native app. Confirm the session is restored.
 5. Select **Sign out** and confirm the sign-in screen appears and `/home` is inaccessible.
 6. Sign in to an account with no approval flag (or `approved: false`) and confirm Access Required appears. Opening `/home` or `/profile-setup` directly must not bypass it. Also try a non-invited account and confirm the configured Clerk sign-up policy rejects it.

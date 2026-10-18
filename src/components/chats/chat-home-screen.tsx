@@ -2,20 +2,20 @@ import { textSize, textLineHeight } from "@/theme/typography";
 import { useFonts } from "expo-font";
 import { Image, type ImageProps } from "expo-image";
 import { useState, useSyncExternalStore } from "react";
-import { FlatList, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { backdrop, blueFill, bubbleFill, inboxIcon, panelFill, searchIcon } from "./chat-art";
 import { chatFonts } from "./chat-fonts";
 import { CreateGroupButton } from "./create-group-button";
 
-export type Conversation = { id: string; title: string; message: string; time?: string; kind: "direct" | "group"; unread?: number; avatar: ImageProps["source"] };
-type Props = { conversations: readonly Conversation[]; onFindPeople: () => void; onCreateGroup?:()=>void; onOpenConversation: (conversation: Conversation) => void };
+export type Conversation = { id: string; title: string; message: string; time?: string; kind: "direct" | "group"; unread?: number; avatar?: ImageProps["source"] };
+type Props = { conversations: readonly Conversation[]; loading?:boolean; onFindPeople: () => void; onCreateGroup?:()=>void; onOpenConversation: (conversation: Conversation) => void };
 const subscribe = () => () => {};
 const clientSnapshot = () => true;
 const serverSnapshot = () => false;
 const filters = ["All", "Direct", "Groups"] as const;
 
-export function ChatHomeScreen({ conversations, onFindPeople, onCreateGroup, onOpenConversation }: Props) {
+export function ChatHomeScreen({ conversations, loading=false, onFindPeople, onCreateGroup, onOpenConversation }: Props) {
   const { width, fontScale } = useWindowDimensions();
   const s = Math.min(width, 480) / 390;
   const insets = useSafeAreaInsets();
@@ -51,13 +51,13 @@ export function ChatHomeScreen({ conversations, onFindPeople, onCreateGroup, onO
     <FlatList data={results} keyExtractor={item => item.id} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={results.length ? { paddingHorizontal: 8 * s, paddingBottom: 22 * s, gap: 4 * s } : { flexGrow: 1 }}
       renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.title}, ${item.message}${item.unread ? `, ${item.unread} unread messages` : ""}`} onPress={() => onOpenConversation(item)} style={({ pressed }) => [{ height: fontScale > 1.2 ? undefined : 82.5 * s, minHeight: 82.5 * s, borderRadius: 17 * s, borderWidth: 1, borderColor: "#0D2034", opacity: pressed ? .75 : 1, backgroundColor: "#071320", overflow: "hidden", paddingHorizontal: 13 * s, paddingVertical: 11 * s, flexDirection: "row", alignItems: "center", gap: 21 * s }]}>
         <Image source={panelFill} style={StyleSheet.absoluteFill} contentFit="fill" accessible={false} pointerEvents="none" />
-        <Image source={item.avatar} style={{ width: 58.5 * s, height: 58.5 * s, borderRadius: 30 * s }} contentFit="cover" accessible={false} />
+        {item.avatar?<Image source={item.avatar} style={{ width: 58.5 * s, height: 58.5 * s, borderRadius: 30 * s }} contentFit="cover" accessible={false} />:<View style={{width:58.5*s,height:58.5*s,borderRadius:30*s,backgroundColor:"#15304E",alignItems:"center",justifyContent:"center"}}><Text style={[text(22,"600"),{color:"#C5D8F8"}]}>{item.title.slice(0,1)}</Text></View>}
         <View style={{ flex: 1, gap: 5 * s }}>
           <View style={{ flexDirection: "row", alignItems: "baseline", gap: 5 * s }}><Text numberOfLines={1} style={[text(17, "600"), { color: "#F8F9FC", flex: 1, letterSpacing: -.4 * s }]}>{item.title}</Text>{item.time && <Text style={[text(13), { color: "#99AFD8" }]}>{item.time}</Text>}</View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 * s }}><Text numberOfLines={1} style={[text(15), { color: "#90A8D2", flex: 1, letterSpacing: -.3 * s }]}>{item.message}</Text>{!!item.unread && <View style={{ width: 27 * s, height: 27 * s, borderRadius: 14 * s, backgroundColor: "#0067FF", alignItems: "center", justifyContent: "center" }}><Text style={[text(14, "600"), { color: "white" }]}>{item.unread > 99 ? "99+" : item.unread}</Text></View>}</View>
         </View>
       </Pressable>}
-      ListEmptyComponent={<View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 * s, paddingTop: 4 * s, minHeight: 370 * s }}>
+      ListEmptyComponent={loading?<View style={{flex:1,justifyContent:"center",alignItems:"center"}}><ActivityIndicator accessibilityLabel="Loading conversations" color="#008BFF"/></View>:<View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 * s, paddingTop: 4 * s, minHeight: 370 * s }}>
         <View style={{ width: 111 * s, height: 111 * s, borderRadius: 56 * s, backgroundColor: "#081523", borderWidth: 1, borderColor: "#102741", alignItems: "center", justifyContent: "center" }}><Image source={inboxIcon} style={{ width: 90 * s, height: 73 * s }} accessible={false} /></View>
         <Text accessibilityRole="header" style={[text(22.5, "600"), { color: "#FAFAFC", textAlign: "center", marginTop: 15 * s, letterSpacing: -.5 * s }]}>{query.trim() || filter !== "All" ? "No conversations found" : "No conversations yet"}</Text>
         <Text style={[text(18), { color: "#93AADA", textAlign: "center", lineHeight: textLineHeight(25), marginTop: 9 * s, letterSpacing: -.5 * s }]}>{query.trim() || filter !== "All" ? "Try another search or start\na new conversation." : "Start a conversation with a\ntrusted connection."}</Text>

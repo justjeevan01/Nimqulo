@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "nimqulo-realtime-dev",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-18",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": false },
+  "durable_objects": { "bindings": [{ "name": "USER_HUB", "class_name": "UserHub" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["UserHub"] }],
+  "ratelimits": [{ "name": "CONNECTION_LIMITER", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } }],
+  "vars": { "API_URL": "https://br-calm-frost-a1ndi9sf-api.compute.c-1.ap-southeast-1.aws.neon.tech/" },
+  "env": {
+    "pilot": {
+      "name": "nimqulo-realtime-pilot",
+      "vars": { "API_URL": "" },
+      "durable_objects": { "bindings": [{ "name": "USER_HUB", "class_name": "UserHub" }] },
+      "ratelimits": [{ "name": "CONNECTION_LIMITER", "namespace_id": "1002", "simple": { "limit": 20, "period": 60 } }]
+    }
+  }
+}

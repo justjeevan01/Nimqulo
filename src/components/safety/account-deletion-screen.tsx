@@ -33,8 +33,8 @@ const consequences = [
     "remove",
   ],
   [
-    "All conversations will be deleted",
-    "Your direct messages and group conversations cannot be recovered.",
+    "Your authored messages will be erased",
+    "Your text is replaced with deletion placeholders. Groups continue for remaining members.",
     "chat",
   ],
   [
@@ -238,7 +238,7 @@ export function AccountDeletionScreen({
           done
             ? preview
               ? "Preview complete"
-              : "Account deleted"
+              : "Deletion requested"
             : "Permanently delete account?"
         }
         visible={confirm}
@@ -254,7 +254,7 @@ export function AccountDeletionScreen({
           <Text style={type(l, 16)}>
             {preview
               ? "This preview is complete. Your account has not been deleted."
-              : "Your account has been deleted."}
+              : "Your access is disabled. Account cleanup will retry automatically until complete. Previously displayed notifications and offline copies cannot be recalled."}
           </Text>
         ) : (
           <>

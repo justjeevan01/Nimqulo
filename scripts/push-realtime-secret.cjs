@@ -1,0 +1,10 @@
+const { spawnSync } = require("node:child_process");
+const path = require("node:path");
+if(!process.env.REALTIME_SERVICE_KEY)throw Error("Missing local realtime service key");
+const args=process.argv.slice(2);
+const envFlag=args.find(arg=>arg.startsWith("--env="));
+const envIndex=args.indexOf("--env");
+if(envIndex!==-1&&(!args[envIndex+1]||args[envIndex+1].startsWith("--")))throw Error("Supply an environment after --env");
+const environment=envFlag?.slice(6)??(envIndex!==-1?args[envIndex+1]:"");
+const result=spawnSync(process.execPath,[path.resolve("realtime/node_modules/wrangler/bin/wrangler.js"),"secret","put","SERVICE_KEY",`--env=${environment}`,...(args.includes("--local")?["--local"]:[])],{cwd:path.resolve("realtime"),input:process.env.REALTIME_SERVICE_KEY,encoding:"utf8"});
+process.stdout.write(result.stdout||"");process.stderr.write(result.stderr||"");process.exitCode=result.status||0;

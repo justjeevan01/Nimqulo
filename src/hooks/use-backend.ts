@@ -1,8 +1,12 @@
 import { useAuth } from "@clerk/expo";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { createBackend } from "@/lib/backend";
 
 export function useBackend() {
   const { getToken } = useAuth();
-  return useMemo(() => createBackend(() => getToken()), [getToken]);
+  const latestToken=useRef(getToken);
+  useEffect(()=>{latestToken.current=getToken;},[getToken]);
+  // createBackend stores this callback; requests invoke it after render.
+  // eslint-disable-next-line react-hooks/refs
+  return useMemo(() => createBackend(() => latestToken.current()), []);
 }

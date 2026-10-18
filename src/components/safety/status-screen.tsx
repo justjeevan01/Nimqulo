@@ -35,7 +35,7 @@ const content = {
   offline: {
     art: require("../../../assets/safety/offline.png"),
     title: "You’re offline",
-    body: "We’ll send your messages\nautomatically when you’re back\nonline. Some content may not\nbe available right now.",
+    body: "Your drafts stay on this phone.\nReconnect, then retry any messages\nthat failed to send.",
     extra: "",
     action: "Try Again",
     secondary: "Go to Settings",

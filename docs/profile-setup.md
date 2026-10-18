@@ -1,13 +1,9 @@
-> Route cleanup: historical `/design-preview/*` URLs below have been removed. The app now uses the authenticated routes documented in [app-routes.md](app-routes.md).
-
 # Profile setup
 
-`/profile-setup` requires a signed-in, admin-approved account (`user.publicMetadata.approved === true`). Every fresh Google sign-in routes approved users here. Unapproved accounts go to Access Required.
+`/profile-setup` requires a signed-in, administrator-approved Google account. Each fresh Clerk session enters this screen immediately; pending accounts enter Access Required. Confirm persists profile data through the authenticated API, then opens protected `/home` directly.
 
-This screen is temporarily UI-only. Display name and username are empty, read-only fields with placeholders. The photo control is decorative; an existing account photo may be displayed. There is no validation, photo selection, Clerk profile update, database write, or saved completion marker. Clerk Username does not need to be enabled for this flow.
+Display names and unique, case-insensitive usernames are stored in Neon Postgres. Usernames use 3–24 letters, digits or underscores and remain immutable during the pilot. Optional photo selection/upload uses Clerk. Validation, busy states, upload errors and username conflicts are displayed without granting approval.
 
-**Confirm** immediately replaces this route with `/home`, showing Chats Home. The shared tabs layout checks approval without requiring a saved profile. Back returns to the previous screen when available, or signs out when setup is the first screen.
+A successful confirmation is remembered only for that Clerk session. Restarting a confirmed Android session restores Chats; a fresh sign-in still reaches setup. Previously loaded data and drafts can be restored offline through account-scoped app storage and Clerk's resource cache. API requests always undergo server authorization. Back from incomplete setup uses shared sign-out; editing an existing profile can return to the preceding screen.
 
-The development-only `/design-preview/profile-setup` route uses the same placeholders and opens the shared chat Home preview on Confirm, without reading or writing a Clerk account. Production builds redirect this preview route to `/`.
-
-Validate with `npx expo lint`, `npx tsc --noEmit`, and the browser flow check in ignored `visual-review/profile-check.cjs`. These JavaScript-only changes load through Metro without rebuilding the Android APK.
+There is no design-preview route or alternate chat-home route. See [messenger.md](messenger.md) for current implementation, validation evidence and pilot release gates.
