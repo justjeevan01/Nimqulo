@@ -35,6 +35,32 @@ test("messenger transactions enforce authorization and lifecycle rules on Postgr
       await pool.query("INSERT INTO nimqulo_accounts(user_id,approved) VALUES($1,true)",[users[i]]);
       await pool.query("INSERT INTO nimqulo_profiles(user_id,display_name,username) VALUES($1,$2,$3)",[users[i],`QA Person ${i}`,`${prefix}_${i}`]);
     }
+    await t.test("username autocomplete matches literal prefixes and preserves privacy and ranking",async()=>{
+      assert.equal((await store.lookup(alice,prefix)).length,20,"suggestions are bounded");
+      const names=["anna","annabelle","joanna","jo_ann","jozann","anna_pending","anna_suspended","anna_deleted"];
+      const ids=names.map((_,i)=>`${prefix}_search_${i}`);
+      try{
+        for(let i=0;i<ids.length;i++){
+          await pool.query("INSERT INTO nimqulo_accounts(user_id,approved,status) VALUES($1,$2,$3)",[ids[i],i!==5,i===6?"suspended":i===7?"deleted":"active"]);
+          await pool.query("INSERT INTO nimqulo_profiles(user_id,display_name,username) VALUES($1,'Search QA',$2)",[ids[i],names[i]]);
+        }
+        assert.deepEqual((await store.lookup(alice," @ANNA ")).map(p=>p.username),["anna","annabelle"]);
+        assert.deepEqual(await store.lookup(alice,"oann"),[],"middle substrings do not match");
+        assert.deepEqual((await store.lookup(alice,"jo_")).map(p=>p.username),["jo_ann"],"underscore is a literal character");
+        assert.ok((await store.lookup(alice,"j")).some(p=>p.id===ids[2]),"one character starts search");
+        assert.ok(!(await store.lookup(ids[0],"anna")).some(p=>p.id===ids[0]),"self is excluded");
+        for(const [owner,target] of [[alice,ids[1]],[ids[1],alice]]){
+          await pool.query("INSERT INTO nimqulo_blocks(owner_id,target_id) VALUES($1,$2)",[owner,target]);
+          assert.deepEqual((await store.lookup(alice,"anna")).map(p=>p.username),["anna"]);
+          await pool.query("DELETE FROM nimqulo_blocks WHERE owner_id=$1 AND target_id=$2",[owner,target]);
+        }
+        for(const query of ["","%","a-b","a".repeat(25)])assert.deepEqual(await store.lookup(alice,query),[]);
+      }finally{
+        await pool.query("DELETE FROM nimqulo_blocks WHERE owner_id=ANY($1::text[]) OR target_id=ANY($1::text[])",[ids]);
+        await pool.query("DELETE FROM nimqulo_profiles WHERE user_id=ANY($1::text[])",[ids]);
+        await pool.query("DELETE FROM nimqulo_accounts WHERE user_id=ANY($1::text[])",[ids]);
+      }
+    });
     await t.test("socket ticket migration preserves existing tables and records when reapplied",async()=>{
       await pool.query("INSERT INTO nimqulo_socket_tickets(hash,user_id,session_id,expires_at) VALUES('qa-existing',$1,'qa-session',now()+interval '30 seconds')",[alice]);
       await pool.query(fs.readFileSync("backend/migrations/006_socket_tickets.sql","utf8"));
@@ -95,7 +121,7 @@ test("messenger transactions enforce authorization and lifecycle rules on Postgr
       await assert.rejects(store.send(bob,direct,"blocked",randomUUID()),{status:403});
       await assert.rejects(store.requestConnection(alice,bob),{status:403});
       await assert.rejects(store.requestConnection(bob,alice),{status:403});
-      assert.equal((await store.lookup(alice,`${prefix}_1`)).length,0);
+      assert.equal((await store.lookup(alice,`${prefix}_1`)).some(person=>person.id===bob),false);
       await store.block(bob,alice,false);await connect(alice,bob);
     });
     await connect(alice,eve);

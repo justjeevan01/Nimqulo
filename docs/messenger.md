@@ -4,7 +4,9 @@ Nimqulo is Android-only. Home, People, groups, requests, invitations and safety 
 
 ## Persisted behavior
 
-- Accepted connections permit direct conversations. Exact username lookup, requests, cancellation, removal and bilateral blocking are enforced by the server.
+- Accepted connections permit direct conversations. Username autocomplete, requests, cancellation, removal and bilateral blocking are enforced by the server.
+- Username suggestions start after one character with a 300 ms typing delay. Matching is case-insensitive, accepts an optional `@`, and suggests usernames beginning with the typed letters. It does not match the middle of a username. Exact matches rank first, followed by other prefixes alphabetically; responses contain at most 20 people. Self, blocked accounts in either direction, and unapproved or inactive accounts are excluded. Old responses are ignored after the query changes or clears.
+- The People tab badge shows incoming connection requests plus pending group invitations. The Requests and Invitations buttons show their individual counts. Outgoing requests and decided invitations do not count; badges disappear at zero and follow the persisted community snapshot after decisions or realtime refresh.
 - Group invitations require acceptance. Current membership periods bound visible history; leaving/removal and later rejoining do not restore earlier messages or photos. Roles, ownership transfer and the 20-member limit are enforced transactionally.
 - Ordered messages use a unique sender/retry identifier. Replies are conversation-scoped and hide unavailable original text. Read positions advance monotonically from visible incoming messages. Dates and read receipts share the direct/group presentation.
 - Direct and group chats support JPEG, PNG and WebP photos up to 5 MB, with optional captions. Private uploads are bound to uploader, conversation and retry identifier. Retrying the same upload/message does not create duplicates; changing its content or borrowing another person's photo is rejected. Photo-only messages and replies to photos are supported.
@@ -24,7 +26,7 @@ The EAS `release` profile creates the phone APK; `release-check` creates an emul
 
 ## Validation boundaries
 
-The isolated Postgres suite currently passes 20 tests covering migrations, authorization, concurrent retries/invitations, membership history, image ownership, HTTP upload limits, sign-out/replacement, operator-only account approval/capacity, moderation, deletion and outage recovery. Five coordinator tests pass. Unit tests cover access routing, provider verification/policy, client errors, reply/read/typing presentation and local reconciliation.
+The isolated Postgres suite currently passes 21 tests covering migrations, authorization, concurrent retries/invitations, membership history, image ownership, HTTP upload limits, sign-out/replacement, operator-only account approval/capacity, moderation, deletion and outage recovery. Five coordinator tests pass. Unit tests cover access routing, provider verification/policy, client errors, reply/read/typing presentation and local reconciliation.
 
 Live photo checks against the development API verified authenticated upload, repeated upload/send, persisted history, identical downloaded bytes and anonymous storage denial. The owner-only QA group, messages and objects were removed. Release checks reject anonymous, forged and genuine non-Google Firebase sessions; the temporary Firebase test identity was deleted. Its health endpoint responds successfully.
 

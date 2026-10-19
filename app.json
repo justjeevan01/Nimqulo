@@ -19,7 +19,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "icon": "./assets/images/app-icon.png",
-      "versionCode": 3
+      "versionCode": 4
     },
     "web": {
       "output": "single",
