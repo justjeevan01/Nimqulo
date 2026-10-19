@@ -1,58 +1,30 @@
 # Android development on Windows
 
-The app is named Nimqulo and uses the Android package `com.jeeva.nimqulo`. `expo-dev-client` is installed at the SDK 58-compatible version. EAS profiles in `eas.json` produce installable APKs: `development` includes the development client, while `preview` produces a standalone internal build.
+Nimqulo uses Expo SDK 58 and Android package `com.jeeva.nimqulo`. EAS project: [@justjeevan.01/Triply-ai](https://expo.dev/accounts/justjeevan.01/projects/Triply-ai).
 
-The project is linked to [@justjeevan.01/Triply-ai on EAS](https://expo.dev/accounts/justjeevan.01/projects/Triply-ai). The first [Android development build](https://expo.dev/accounts/justjeevan.01/projects/Triply-ai/builds/9ddaac0a-e060-4de2-bf17-d712b8e6f8bc) completed successfully and was installed on Pixel 8. Its APK is stored in `D:\Android\builds`. Signing credentials are managed by EAS. Native app startup and the authentication screen were verified on the emulator; completing Google authentication requires the account owner. Profile setup is UI-only: Confirm opens Chats Home without saving account details.
+## Builds
 
-Pixel 8 is configured on this computer. Its virtual-device files are stored in `D:\Android\avd\Pixel_8.avd`, and the user-level `ANDROID_AVD_HOME` points to `D:\Android\avd`. The original C: data was retained as a backup. Existing Android Studio processes should be restarted to pick up the default location for new devices. The Android SDK itself is still under `%LOCALAPPDATA%\Android\Sdk`.
-
-Use EAS cloud builds to avoid filling the nearly full C: drive with local Gradle and Android build outputs. No generated `android/` or `ios/` directories need to be committed or edited by hand.
-
-From the project directory, sign in to Expo and link/configure the project before the first build:
+`development` includes the development client and connects to development services. `release` produces the signed standalone ARM phone APK; `release-check` is an x86_64 emulator verification build. Rebuild after changing native modules or config plugins. The Firebase/Google native modules are not available in older Clerk APKs or Expo Go.
 
 ```powershell
-npx --yes eas-cli@latest login
-npx --yes eas-cli@latest build:configure --platform android
-npx --yes eas-cli@latest build --platform android --profile development
-```
-
-Install the completed development build into the running emulator:
-
-```powershell
-npx --yes eas-cli@latest build:run --platform android --latest
-```
-
-Then start Metro and open the installed app:
-
-```powershell
+npx eas-cli@latest login
+npx eas-cli@latest build --platform android --profile development
+npx eas-cli@latest build:run --platform android --latest
 npm run android
 ```
 
-The Android script starts the development client on localhost with IPv4 DNS resolution. On this Windows/Node setup, the default localhost resolution bound Metro only to `::1`, while ADB reverse forwarding connected to IPv4; this caused an unexpected-end-of-stream error on the emulator. The explicit IPv4 preference resolves that connection issue. Expo opens the installed development client and forwards the emulator's connection to Metro.
+The release APK runs without Metro, Expo Go or a connected development computer. See [release.md](release.md) for verified artifacts and acceptance status.
 
-The local `.env` supplies the Clerk publishable key when Metro serves JavaScript. A standalone preview build additionally needs `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` configured in the EAS `preview` environment before building. Never add Clerk secret keys to public environment variables or commit `.env`.
+## Local configuration
 
-Google sign-in uses the existing browser-based Clerk SSO flow and the `triplyai` scheme. Expo Go cannot supply this project's complete native build configuration. Rebuild the development APK when native modules or config plugins change; ordinary screen changes load from Metro without rebuilding.
+Set the local public API URL and server values using `.env.example`. Google sign-in uses Firebase and Android Credential Manager, not browser SSO. The updated root `google-services.json` must contain the public web OAuth client and the Android signing SHA-1. The SDK receives the client ID explicitly because release resource shrinking removes the auto-detection string. Never place an Admin private key in the public Android configuration or an `EXPO_PUBLIC_` variable.
 
-Use `npx expo lint`, `npx tsc --noEmit`, and `npx expo install --check` to validate project changes before building.
+Display names, usernames, optional private profile photos, preferences and community state persist through the authenticated API. Each fresh approved sign-in opens setup; Confirm saves and opens Home. Pending accounts see Access Required. See [authentication.md](authentication.md).
 
-Emulator verification exposed missing icons from percent-encoded SVG data URLs. Shared SVG sources now use UTF-8 Base64 encoding, which matches Expo Image's Android data-URL loader and also renders on web. Unit checks cover byte alignment/padding and Unicode; browser checks cover the chat UI and signed-out route guards. Screenshots and local build scripts are kept in ignored `visual-review/`.
+## Emulator and disk space
 
-The floating glass tab bar adds `expo-blur ~58.0.4`. Install a development APK rebuilt with that module to enable native backdrop blur; older installed clients keep the translucent visual fallback. JavaScript styling and navigation changes still refresh through Metro.
+Create an Android virtual device with Google Play services in Android Studio. The SDK normally lives under `%LOCALAPPDATA%\Android\Sdk`; virtual-device data and downloaded APKs can be stored on another drive. Use EAS cloud builds to avoid large local Gradle outputs. Generated `android/` and `ios/` directories must not be edited by hand.
 
-The glass-enabled Android development build is [03580681-f977-4610-b74c-cc96065f36bc](https://expo.dev/accounts/justjeevan.01/projects/Triply-ai/builds/03580681-f977-4610-b74c-cc96065f36bc). Its APK is `D:\Android\builds\nimqulo-development-glass-03580681.apk`.
+`npm run android` prefers IPv4 localhost. On this Windows/Node setup, binding Metro only to `::1` caused ADB forwarding to fail with unexpected-end-of-stream errors. Start Metro with the supplied command after it is fully ready. DNS/network failures should be checked independently of authentication changes; Android Studio supports an explicit emulator `-dns-server` launch option if automatic DNS fails.
 
-
-If the Google button remains disabled, check emulator DNS before changing authentication code. On this machine, Android could ping `1.1.1.1` but `ping clerk.com` returned `unknown host`, leaving Clerk initialization in an error state. Close Pixel 8 and launch it with explicit DNS servers:
-
-```powershell
-& "$env:LOCALAPPDATA/Android/Sdk/emulator/emulator.exe" -avd Pixel_8 -no-snapshot-load -no-snapshot-save -dns-server 1.1.1.1,8.8.8.8
-```
-
-Then run `npm run android`. The [`-dns-server` emulator option](https://developer.android.com/studio/run/emulator-commandline#common) applies to that emulator launch; a later Android Studio launch may use automatic DNS again. No app data wipe or Clerk dashboard changes are needed.
-
-If cold boot freezes with host graphics, append `-gpu software` to that launch command. This changes rendering for the emulator process without wiping its data.
-
-The root auth route now declares an explicit protected-route destination using the existing approval policy. Reopening `/` with a restored signed-in session routes approved users to profile setup and unapproved users to Access Required, instead of relying on the first available navigator screen.
-
-Verification after the DNS/redirect fix: Pixel 8 restored the existing approved Clerk session, reopened the root route into profile setup, completed real Settings sign-out, and opened the Google account chooser from the enabled authentication button. Account selection was left to the owner. Browser checks reached Google and verified cancellation/reload; lint, typecheck, and all nine unit tests passed. The native capture is `visual-review/signin-google-native.png`.
+Run lint, typecheck and Expo Doctor before release. Native SVG sources use UTF-8 Base64 to avoid Android data-URL decoding issues. Keep temporary screenshots and test artifacts outside the repository; production contains no design-preview routes.

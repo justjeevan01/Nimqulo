@@ -1,5 +1,5 @@
 import { textSize, textLineHeight } from "@/theme/typography";
-import { useAuth, useClerk } from "@clerk/expo";
+import { useAuth } from "@/state/auth";
 import { useFonts } from "expo-font";
 import { Image } from "expo-image";
 import * as Linking from "expo-linking";
@@ -19,7 +19,7 @@ export function AccessRequiredScreen() {
   const { width, height, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { isLoaded, isSignedIn } = useAuth();
-  const { signOut } = useClerk();
+  const { signOut } = useAuth();
   const [fontsLoaded, fontError] = useFonts({ Inter: require("../../../assets/fonts/Inter.ttf") });
   const mounted = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot);
   const [busy, setBusy] = useState<"support" | "return" | null>(null);

@@ -13,7 +13,7 @@
   "env": {
     "pilot": {
       "name": "nimqulo-realtime-pilot",
-      "vars": { "API_URL": "" },
+      "vars": { "API_URL": "https://br-square-feather-a14064tt-api.compute.c-1.ap-southeast-1.aws.neon.tech/" },
       "durable_objects": { "bindings": [{ "name": "USER_HUB", "class_name": "UserHub" }] },
       "ratelimits": [{ "name": "CONNECTION_LIMITER", "namespace_id": "1002", "simple": { "limit": 20, "period": 60 } }]
     }

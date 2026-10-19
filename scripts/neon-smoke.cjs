@@ -11,23 +11,9 @@ const hash = bytes => createHash("sha256").update(bytes).digest("hex");
   assert.equal((await fetch(new URL("preferences", base))).status, 401);
   assert.equal((await fetch(new URL("preferences", base), { headers: { Authorization: "Bearer invalid" } })).status, 401);
   console.log("PASS: deployed function health and unauthenticated rejection");
-  let session;
   async function token() {
-    if (process.env.BACKEND_TEST_TOKEN) return process.env.BACKEND_TEST_TOKEN;
-    if (!process.env.BACKEND_TEST_USER_ID || !process.env.CLERK_SECRET_KEY) throw new Error("Set BACKEND_TEST_TOKEN or BACKEND_TEST_USER_ID locally for an approved account with an active app session.");
-    const headers = { Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`, "Content-Type": "application/json" };
-    if (!session) {
-      const response = await fetch(`https://api.clerk.com/v1/sessions?user_id=${encodeURIComponent(process.env.BACKEND_TEST_USER_ID)}&status=active&limit=1`, { headers });
-      if (!response.ok) throw new Error(`Clerk session lookup failed: HTTP ${response.status}`);
-      const result = await response.json();
-      session = (Array.isArray(result) ? result : result.data)?.[0]?.id;
-      if (!session) throw new Error("Sign into the app first; the selected test account has no active session.");
-    }
-    const response = await fetch(`https://api.clerk.com/v1/sessions/${session}/tokens`, { method: "POST", headers, body: "{}" });
-    if (!response.ok) throw new Error(`Clerk test token failed: HTTP ${response.status}`);
-    const result = await response.json();
-    if (!result.jwt) throw new Error("Clerk did not return a session token.");
-    return result.jwt;
+    if(!process.env.BACKEND_TEST_TOKEN||!process.env.BACKEND_TEST_SESSION_NONCE)throw new Error("Set BACKEND_TEST_TOKEN and BACKEND_TEST_SESSION_NONCE locally from your own active Firebase app session. Never paste credentials into chat.");
+    return {token:process.env.BACKEND_TEST_TOKEN,sessionNonce:process.env.BACKEND_TEST_SESSION_NONCE};
   }
   const { createBackend } = await import("../src/lib/backend.ts");
   const api = createBackend(token);
@@ -40,7 +26,7 @@ const hash = bytes => createHash("sha256").update(bytes).digest("hex");
     await api.savePreferences(next);
     assert.deepEqual(await api.preferences(), next);
     console.log("PASS: app client -> Neon Function -> Postgres preferences write/read");
-    const bytes = fs.readFileSync("assets/chats/preview-teyler.png");
+    const bytes = fs.readFileSync("assets/images/app-icon.png");
     uploaded = await api.uploadImage(`data:image/png;base64,${bytes.toString("base64")}`);
     const stored = await api.image(uploaded.id);
     const download = await fetch(stored.url); assert.equal(download.status, 200);
@@ -48,8 +34,8 @@ const hash = bytes => createHash("sha256").update(bytes).digest("hex");
     const result = await client.query("SELECT size, content_type, owner_id, object_key FROM nimqulo_media WHERE id=$1", [uploaded.id]);
     assert.equal(result.rows[0].size, bytes.length); assert.equal(result.rows[0].content_type, "image/png");
     console.log("PASS: app client -> Function -> private object storage; downloaded bytes match; Postgres metadata verified");
-    if (process.env.BACKEND_OTHER_TOKEN) {
-      const other = createBackend(async () => process.env.BACKEND_OTHER_TOKEN);
+    if (process.env.BACKEND_OTHER_TOKEN && process.env.BACKEND_OTHER_SESSION_NONCE) {
+      const other = createBackend(async () => ({token:process.env.BACKEND_OTHER_TOKEN,sessionNonce:process.env.BACKEND_OTHER_SESSION_NONCE}));
       await assert.rejects(other.image(uploaded.id), /not found/);
       await assert.rejects(other.deleteImage(uploaded.id), /not found/);
       console.log("PASS: second authenticated user cannot read or delete the first user's image");

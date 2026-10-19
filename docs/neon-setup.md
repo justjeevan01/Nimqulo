@@ -1,39 +1,30 @@
 # Neon backend setup
 
-The app is linked to Neon project `divine-bonus-12105648` in organization `org-red-resonance-88595204`, branch `production`, region `aws-ap-southeast-1`. Infrastructure is declared in `neon.ts`: Postgres, the private `assets` bucket, and the `api` function. Clerk remains the identity provider; Neon Auth, Data API, AI Gateway, and Realtime are not provisioned by this config.
+Nimqulo uses Neon project `divine-bonus-12105648` in Singapore (`aws-ap-southeast-1`). Infrastructure in `neon.ts` declares Postgres, the private `assets` bucket, the HTTP API and scheduled delivery recovery. Firebase handles authentication; Neon Auth and Neon Realtime are not enabled. Cloudflare Durable Objects deliver live invalidations and typing events.
 
-## What is connected
+The existing `production` branch (`br-calm-frost-a1ndi9sf`) is the development environment. The separate `pilot` branch (`br-square-feather-a14064tt`) is the release environment. It was created schema-only: development profiles, chats, sessions and push tokens were not copied. Its database password and storage/coordinator credentials are separate.
 
-- Settings appearance/notification preferences load from and save to Postgres through the API. Appearance persists the selection; this does not add light-mode styling or notification delivery.
-- Create Group's existing photo picker uploads raster images through the API into private object storage. The API stores owner, object key, type, and size in Postgres and returns a one-hour signed read URL. This is an initial media integration; group records and conversations remain the existing local placeholders, and signed image URLs need refreshing for longer-lived group persistence.
-- Every data/media endpoint verifies the Clerk token signature, issuer, expiry, session claim, and web origin when present, then reads admin approval from Clerk's Backend API. Resource ownership comes from the verified token, never a request-supplied user ID. Images belonging to another user return 404.
-- The mobile/web app sends Clerk session tokens to the public API URL. Database, S3, and Clerk secret credentials stay in the backend. The release browser bundle was checked for secret values.
+## Connected services
 
-Neon Functions use Node.js 24. A small module-level `pg` pool is shared across requests and registered with `attachDatabasePool`; Drizzle defines the tables and queries. The Files SDK's Neon adapter reads the injected S3 environment variables. Server code is under `backend/`, outside Expo Router and the client import tree.
+- Postgres persists profiles, preferences, connections, groups, invitations, conversations, messages, read positions, blocks, reports and deletion/delivery jobs.
+- Private object storage holds profile and chat photos. Uploads validate raster signatures and a 5 MB cap. Chat photos are bound to their conversation, uploader and retry identifier. Only authorized current members can resolve a published photo from their current membership period; removed members and blocked direct contacts cannot request it.
+- The Node.js 24 API verifies Firebase tokens and current Google/admin approval independently of the mobile UI. Resource ownership comes from the verified identity. A module-level `pg` pool is registered with `attachDatabasePool`; Drizzle handles profile/preferences/media queries. The Files SDK uses Neon's injected S3 credentials.
+- Signed photo URLs expire; message history stores photo IDs. The app resolves fresh URLs for display/opening. Failed uploads keep their local photo in the account-private directory for retry. Sign-out removes account caches.
 
-## Environment and deployment
+## Environment
 
-Keep `.env` and `.neon` untracked. `.env.example` lists names only. `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` and `EXPO_PUBLIC_API_URL` are public client configuration. `CLERK_SECRET_KEY`, `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, and `AWS_*` credentials must never receive the `EXPO_PUBLIC_` prefix.
+Keep `.env`, `.env.release`, `.neon` and service-account JSONs outside Git and the EAS upload. `EXPO_PUBLIC_API_URL` is public. `FIREBASE_ADMIN_CONFIG`, database/S3 credentials and `REALTIME_SERVICE_KEY` are server-only. Never expose them through an `EXPO_PUBLIC_` name.
 
-`CLERK_ISSUER_URL` is the HTTPS frontend API origin for the existing Clerk instance. Set `APP_ORIGINS` to the allowed web origins and app scheme before deploying a new web hostname. The current defaults cover local ports 8081, 8082, 19006, and `triplyai://`.
-
-```powershell
-neon login
-npm run backend:deploy
-neon functions get api -o json | node scripts/neon-client-env.cjs
-npm run db:migrate
-npm run build
-npm run android
+```sh
+node --env-file=.env.release scripts/migrate.cjs
+neon deploy --env .env.release --branch pilot --project-id divine-bonus-12105648 --no-env-pull
+node --env-file=.env.release scripts/push-realtime-secret.cjs --env pilot
 ```
 
-`backend:deploy` calls `neon deploy --env .env`, provisions the config, and pulls Neon-managed variables into `.env`. The URL helper copies only `invocation_url` into `EXPO_PUBLIC_API_URL`. Restart Metro after changing client environment variables. `npm run backend:dev` runs the function locally using the linked branch's resources.
-
-Migrations live in `backend/migrations`, run transactionally with an advisory lock and migration ledger, and use the direct connection. Migration 001 was applied successfully on the temporary `nimqulo-setup-validation` branch before production. That isolated validation branch was created with a one-hour expiry. CLI context remains production.
+Deploy the coordinator from `realtime` with `node node_modules/wrangler/bin/wrangler.js deploy --env pilot`. Its `API_URL` must match the isolated release API. Migrations use the direct connection, a ledger and a transaction lock. Test migrations on an isolated branch before deployment.
 
 ## Validation
 
-`npm run build` runs TypeScript, exports the Expo web app, then builds the Node backend artifact into `dist/backend/index.mjs`. The order preserves the backend artifact after Expo prepares `dist`. `npm test` includes backend approval, ownership, CORS, payload limit, and Clerk signature/issuer/expiry/origin checks alongside the existing app tests.
+`npm run build` typechecks, exports the Android application and builds `dist/backend/index.mjs`. `npm test` exercises access, authentication policy, ownership, payload limits and client behavior. `npm run test:realtime` checks coordinator authorization. `npm run test:messenger` requires an explicitly isolated `MESSENGER_TEST_HOST` and creates/removes its own temporary schema.
 
-For live checks, set `BACKEND_TEST_USER_ID` locally to an approved account with an existing active app session and run `npm run backend:smoke`. The script uses the local server-only Clerk secret to mint fresh tokens for that existing session; it does not create users, change approval, or store tokens. Alternatively supply `BACKEND_TEST_TOKEN` locally as a short-lived session JWT. This uses the actual shared app API client to save/read preferences, upload/download an image, verify matching SHA-256 bytes and Postgres media metadata, then remove the test image and restore preferences. It also tests health and unauthenticated rejection. Tokens must remain local and are not printed. An optional `BACKEND_OTHER_TOKEN` enables the live second-account isolation check; without it, that check is explicitly reported as untested. Unit tests cover two-user isolation.
-
-The initial OAuth attempt timed out; signing in again succeeded. Deployment initially hit an environment-dependent config evaluation error while deriving the Clerk issuer inline; an explicit issuer environment variable fixed it. An initially missing build tool was installed. Final build, typecheck, lint, 15 tests, deployed service checks, secret-bundle checks, Android preference persistence across app reload, and an actual Android photo-picker upload passed. Test preferences were restored and test objects/metadata were removed. The app was left on Home with the placeholder chats and plus button. Dependency audit reports 28 findings (8 moderate, 20 high); broad dependency upgrades were not applied as part of infrastructure setup.
+Live service checks and native acceptance are recorded in [release.md](release.md) and [messenger.md](messenger.md). A health response or a successful build alone does not prove authenticated messaging, Google sign-in or a two-phone conversation.

@@ -47,12 +47,11 @@ export function ProfileSetupScreen({ initialImageSource, initialProfile, onUploa
     if (pending.current) return;
     pending.current = true; setBusy("photo"); setError(null);
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8, base64: true });
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
       if (result.canceled) return;
       const asset = result.assets[0];
-      if (!asset.base64) throw new Error("Could not read this photo. Choose another.");
-      if (asset.base64.length * 0.75 > 5 * 1024 * 1024) throw new Error("Choose a photo smaller than 5 MB.");
-      await onUploadPhoto(`data:${asset.mimeType || "image/jpeg"};base64,${asset.base64}`);
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) throw new Error("Choose a photo smaller than 5 MB.");
+      await onUploadPhoto(asset.uri);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not upload your photo. You can retry or continue without it."); }
     finally { pending.current = false; setBusy(null); }
   }

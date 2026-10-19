@@ -4,17 +4,20 @@ import type { Profile } from "@/lib/backend";
 import { deviceId } from "@/lib/device";
 import { setCacheOwner, readCache, writeCache } from "@/lib/local-cache";
 import { ApiError } from "@/lib/backend";
-import { useAuth, useUser } from "@clerk/expo";
+import { useAuth, useUser } from "@/state/auth";
+import { AppState } from "react-native";
 
 function useProfileState() {
   const api = useBackend();
   const {user}=useUser();const userId=user!.id;
   const {sessionId}=useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [photo,setPhoto]=useState<string>();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const saving = useRef(false);
+  const photoRevision=useRef(0);
   useEffect(() => {
     let active = true;
     setCacheOwner(userId);
@@ -26,10 +29,18 @@ function useProfileState() {
   const save = useCallback(async (value: Profile) => {
     if (saving.current) throw new Error("Your profile is already being saved.");
     saving.current = true;
-    try { const saved = await api.saveProfile(value); setProfile(saved);await writeCache(userId,"profile",saved); return saved; }
+    try { const saved = await api.saveProfile(value);const avatarUrl=photo||profile?.avatarUrl;const next={...saved,...(avatarUrl?{avatarUrl}:{})}; setProfile(next);await writeCache(userId,"profile",next); return next; }
     finally { saving.current = false; }
-  }, [api,userId]);
-  return { profile, ready, error, save, retry: () => { setError(""); setAttempt(value => value + 1); } };
+  }, [api,userId,profile?.avatarUrl,photo]);
+  useEffect(()=>{
+    let active=true;
+    const refresh=()=>{const revision=photoRevision.current;void api.profile().then(value=>{if(active&&value&&revision===photoRevision.current){setProfile(value);setPhoto(value.avatarUrl);}}).catch(()=>{});};
+    const listener=AppState.addEventListener("change",state=>{if(state==="active")refresh();});
+    const timer=setInterval(()=>{if(AppState.currentState==="active")refresh();},12*60*1000);
+    return()=>{active=false;listener.remove();clearInterval(timer);};
+  },[api]);
+  const uploadPhoto=useCallback(async(uri:string)=>{photoRevision.current++;const image=await api.uploadImage(uri);const saved=await api.saveAvatar(image.id);setPhoto(saved.url);setProfile(current=>current?{...current,avatarUrl:saved.url}:current);return saved.url;},[api]);
+  return { profile,avatarUrl:photo||profile?.avatarUrl, ready, error, save, uploadPhoto, retry: () => { setError(""); setAttempt(value => value + 1); } };
 }
 const Context = createContext<ReturnType<typeof useProfileState> | null>(null);
 export function ProfileProvider({ children }: PropsWithChildren) {

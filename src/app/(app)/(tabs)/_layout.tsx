@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/expo";
+import { useUser } from "@/state/auth";
 import { Redirect } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 import { AppTabs } from "@/components/chats/app-tabs";

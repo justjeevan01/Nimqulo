@@ -1,58 +1,31 @@
-import { isClerkAPIResponseError, useAuth, useSSO } from "@clerk/expo";
-import { makeRedirectUri } from "expo-auth-session";
-import { useEffect, useRef, useState } from "react";
-import { Platform } from "react-native";
-import * as WebBrowser from "expo-web-browser";
-import { router } from "expo-router";
+import { GoogleAuthProvider,getAuth,signInWithCredential,getIdTokenResult } from "@react-native-firebase/auth";
+import { GoogleOneTapSignIn,isCancelledResponse,isSuccessResponse } from "react-native-nitro-google-signin";
+import { randomUUID } from "expo-crypto";
+import { useRef,useState } from "react";
+import { beginGoogleSession,useAuth } from "@/state/auth";
+import Constants from "expo-constants";
 
-export function useGoogleSignIn() {
-  const { isLoaded, isSignedIn } = useAuth();
-  const { startSSOFlow } = useSSO();
-  const pending = useRef(false);
-  const [isSigningIn, setIsSigningIn] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (Platform.OS !== "android") return;
-    void WebBrowser.warmUpAsync().catch(() => {});
-    return () => { void WebBrowser.coolDownAsync().catch(() => {}); };
-  }, []);
-
-  const signIn = async () => {
-    if (!isLoaded || isSignedIn || pending.current) return;
-    pending.current = true;
-    setIsSigningIn(true);
-    setError(null);
-    try {
-      const { createdSessionId, setActive, signIn, signUp, authSessionResult } = await startSSOFlow({
-        strategy: "oauth_google",
-        redirectUrl: makeRedirectUri({ scheme: "triplyai", path: "sso-callback" }),
-      });
-      if (authSessionResult?.type === "cancel" || authSessionResult?.type === "dismiss") return;
-      if (createdSessionId && setActive) {
-        await setActive({ session: createdSessionId });
-        // The root route guard handles navigation after the session becomes active.
-      } else if (signUp?.status === "missing_requirements") {
-        setError("Your account needs more information. Please contact the person who invited you.");
-      } else if (signIn?.status === "needs_second_factor" || signIn?.status === "needs_client_trust") {
-        setError("Your account requires additional verification. Please contact the person who invited you.");
-      } else if (authSessionResult?.type === "success") {
-        setError("Sign-in wasn’t completed. Please try again.");
-      }
-      // Closing or cancelling the browser leaves the user on this screen without an error.
-    } catch (cause) {
-      // Clerk's restricted sign-up mode is the authority for invitation access.
-      if (isClerkAPIResponseError(cause) && cause.errors.some(({ code }) => code === "sign_up_mode_restricted")) {
-        router.push("/access-required");
-        return;
-      }
-      const providerError = isClerkAPIResponseError(cause) ? cause.errors[0] : undefined;
-      setError(providerError?.longMessage || providerError?.message || "We couldn’t sign you in. Check your connection and invitation, then try again.");
-    } finally {
-      pending.current = false;
-      setIsSigningIn(false);
-    }
-  };
-
-  return { signIn, isReady: isLoaded && !isSignedIn, isSigningIn, error };
+export function useGoogleSignIn(){
+  const {isLoaded,isSignedIn}=useAuth();const pending=useRef(false);
+  const [isSigningIn,setSigningIn]=useState(false);const [error,setError]=useState<string|null>(null);
+  async function signIn(){
+    if(!isLoaded||isSignedIn||pending.current)return;
+    pending.current=true;setSigningIn(true);setError(null);
+    try{
+      const clientId=Constants.expoConfig?.extra?.googleWebClientId;
+      if(typeof clientId!=="string"||!clientId.endsWith(".apps.googleusercontent.com"))throw Error("Google sign-in configuration is missing.");
+      GoogleOneTapSignIn.configure({webClientId:clientId});
+      await GoogleOneTapSignIn.checkPlayServices();
+      const response=await GoogleOneTapSignIn.presentExplicitSignIn();
+      if(isCancelledResponse(response))return;
+      if(!isSuccessResponse(response)||!response.data.idToken)throw Error("Google sign-in did not finish. Please try again.");
+      await beginGoogleSession(randomUUID());
+      const result=await signInWithCredential(getAuth(),GoogleAuthProvider.credential(response.data.idToken));
+      await getIdTokenResult(result.user,true);
+    }catch(cause){
+      const code=(cause as {code?:string}).code;
+      if(code!=="SIGN_IN_CANCELLED")setError(code==="auth/network-request-failed"?"Check your connection and try signing in again.":"Could not sign in with Google. Please try again.");
+    }finally{pending.current=false;setSigningIn(false);}
+  }
+  return {signIn,isReady:isLoaded&&!isSignedIn,isSigningIn,error};
 }

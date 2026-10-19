@@ -14,3 +14,17 @@ export async function readCache<T>(user:string,key:string):Promise<T|undefined>{
 export async function writeCache(user:string,key:string,value:unknown){if(owner!==user)return;location(user,key).writeSync(JSON.stringify(value));}
 export function removeCache(user:string,key:string){if(owner!==user)return;const file=location(user,key);if(file.exists)file.delete();}
 export function clearPrivateCache(){generation++;owner=undefined;const directory=root();if(directory.exists)directory.delete();}
+export async function keepChatPhoto(uri:string,id:string){
+  if(!owner)throw new Error("Please sign in again.");
+  const current=generation;
+  const source=new File(uri);
+  if(source.size>5*1024*1024)throw new Error("Choose an image smaller than 5 MB.");
+  const directory=new Directory(root(),encodeURIComponent(owner),"photos");directory.create({idempotent:true,intermediates:true});
+  const photo=new File(directory,`${id}.${source.extension.replace(/^\./,"")||"jpg"}`);await source.copy(photo);
+  if(current!==generation){if(photo.exists)photo.delete();throw new Error("Please sign in again.");}
+  return photo.uri;
+}
+export function discardChatPhoto(uri:string){
+  const directory=new Directory(root(),encodeURIComponent(owner||""),"photos");
+  if(owner&&uri.startsWith(`${directory.uri.replace(/\/$/,"")}/`)){const photo=new File(uri);if(photo.exists)photo.delete();}
+}

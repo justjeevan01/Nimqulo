@@ -4,7 +4,7 @@ import { CommunityProvider } from "@/state/community-fixtures";
 import { ProfileProvider } from "@/state/profile";
 import { ProfileGate } from "@/components/profile/profile-gate";
 import { MessengerProvider } from "@/state/messenger";
-import { useUser } from "@clerk/expo";
+import { useUser } from "@/state/auth";
 import { useEffect } from "react";
 import { configureNotifications } from "@/lib/notifications";
 

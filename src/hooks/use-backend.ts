@@ -1,4 +1,4 @@
-import { useAuth } from "@clerk/expo";
+import { useAuth } from "@/state/auth";
 import { useEffect, useMemo, useRef } from "react";
 import { createBackend } from "@/lib/backend";
 
