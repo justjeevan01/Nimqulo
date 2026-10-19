@@ -2,6 +2,9 @@
 
 Direct and group conversations share the same existing typography and bubble layout.
 
+- Conversations open at the newest message. The inverted history keeps the visible messages anchored when older history loads, while sending a message returns to the newest end.
+- The attachment button offers Camera and Gallery. Camera access is requested when chosen; denied access has a settings option when Android cannot ask again. Both sources preview before sending and use the same private photo upload and retry flow. Microphone access is not requested.
+- Group owners and administrators can choose a photo in Create/Edit Group. Migration 009 stores the owned media reference; member snapshots resolve private image URLs for the chat list, chat header and group details. Name-only edits preserve the current photo.
 - Date separators use the device's local calendar: Today, Yesterday, or a full date with year. Stored timestamps remain server ISO timestamps; local pending messages receive a timestamp immediately.
 - Swipe a committed message to the right to select Reply. Horizontal motion must dominate vertical motion; scrolling, diagonal movement, short drags and cancelled gestures do not select a reply. The composer displays the selected quote and a Cancel reply control. Reply selection and failed messages are cached with the draft.
 - Migration 005 stores a reference to the original message. The API validates the conversation, membership visibility and deletion state. Retrying must preserve both text and reply ID. Quotes are resolved from current server records, capped at 240 characters, and replaced with an unavailable notice when deleted or outside the viewer's membership period.

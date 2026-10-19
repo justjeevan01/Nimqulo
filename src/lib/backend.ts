@@ -46,7 +46,7 @@ export function createBackend(getToken: TokenProvider) {
     decideConnection: (id:string,decision:"accept"|"decline"|"cancel")=>request<void>(`/connections/${pathId(id)}/decision`,json("POST",{decision})),
     removeConnection: (targetId:string)=>request<void>(`/connections/${pathId(targetId)}`,{method:"DELETE"}),
     direct: (targetId:string)=>request<{id:string}>("/conversations/direct",json("POST",{targetId})),
-    saveGroup: (name:string,invitees:readonly string[],id?:string)=>request<{id:string}>(id?`/groups/${pathId(id)}`:"/groups",json(id?"PUT":"POST",{name,invitees})),
+    saveGroup: (name:string,invitees:readonly string[],id?:string,mediaId?:string)=>request<{id:string}>(id?`/groups/${pathId(id)}`:"/groups",json(id?"PUT":"POST",{name,invitees,mediaId})),
     manageMember: (id:string,targetId:string,action:"Admin"|"Member"|"remove"|"transfer"|"leave")=>request<void>(`/groups/${pathId(id)}/members`,json("POST",{targetId,action})),
     decideInvitation: (id:string,status:"accepted"|"declined")=>request<void>(`/invitations/${pathId(id)}/decision`,json("POST",{status})),
     messages: (id:string,before?:number)=>request<{messages:MessageRecord[];before:number|null}>(`/conversations/${pathId(id)}/messages${before?`?before=${before}`:""}`),

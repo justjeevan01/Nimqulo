@@ -30,8 +30,8 @@ export function messengerRoutes(store: MessengerStore,publishTyping?:TypingPubli
   app.post("/connections/:id/decision",async c=>{const b=await c.req.json();if(!["accept","decline","cancel"].includes(b.decision))throw new ServiceError(400,"Choose a decision.");await store.decideConnection(c.get("userId"),c.req.param("id"),b.decision);return c.body(null,204);});
   app.delete("/connections/:target",async c=>{await store.removeConnection(c.get("userId"),c.req.param("target"));return c.body(null,204);});
   app.post("/conversations/direct",async c=>{const b=await c.req.json();if(typeof b.targetId!=="string")throw new ServiceError(400,"Choose a connection.");return c.json(await store.direct(c.get("userId"),b.targetId));});
-  app.post("/groups",async c=>{const b=await c.req.json();return c.json(await store.saveGroup(c.get("userId"),b.name,b.invitees));});
-  app.put("/groups/:id",async c=>{const b=await c.req.json();return c.json(await store.saveGroup(c.get("userId"),b.name,b.invitees,c.req.param("id")));});
+  app.post("/groups",async c=>{const b=await c.req.json();return c.json(await store.saveGroup(c.get("userId"),b.name,b.invitees,undefined,b.mediaId));});
+  app.put("/groups/:id",async c=>{const b=await c.req.json();return c.json(await store.saveGroup(c.get("userId"),b.name,b.invitees,c.req.param("id"),b.mediaId));});
   app.post("/groups/:id/members",async c=>{
     const b=await c.req.json();if(typeof b.targetId!=="string"||!["Admin","Member","remove","transfer","leave"].includes(b.action))throw new ServiceError(400,"Choose a member action.");
     await store.manageMember(c.get("userId"),c.req.param("id"),b.targetId,b.action);return c.body(null,204);

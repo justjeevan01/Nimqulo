@@ -158,13 +158,18 @@ export class MessengerStore {
       await this.event(db,[target],"invitation",conversation);
     }
   }
-  async saveGroup(user:string,name:string,ids:readonly string[],id?:string) {
-    validText(name,50); if(id)validId(id);
+  async saveGroup(user:string,name:string,ids:readonly string[],id?:string,mediaId?:string) {
+    validText(name,50); if(id)validId(id);if(mediaId!==undefined)validId(mediaId);
     return this.mutate(user,async db=>{
       if(!(await db.query("SELECT 1 FROM nimqulo_profiles WHERE user_id=$1",[user])).rowCount)throw new ServiceError(409,"Complete your profile first.");
       const groupId=id||randomUUID();
       if(id){const m=await this.member(db,user,id);if(m.kind!=="group"||m.role==="Member")throw new ServiceError(403,"Only group administrators can edit this group.");await db.query("UPDATE nimqulo_conversations SET name=$2 WHERE id=$1",[id,name.trim()]);}
       else {await db.query("INSERT INTO nimqulo_conversations(id,kind,name) VALUES($1,'group',$2)",[groupId,name.trim()]);await db.query("INSERT INTO nimqulo_memberships(id,conversation_id,user_id,role,start_seq) VALUES($1,$2,$3,'Owner',1)",[randomUUID(),groupId,user]);}
+      if(mediaId!==undefined){
+        const image=await db.query("SELECT id FROM nimqulo_media WHERE id=$1 AND owner_id=$2 FOR KEY SHARE",[mediaId,user]);
+        if(!image.rowCount)throw new ServiceError(404,"Photo not found. Choose the group photo again.");
+        await db.query("UPDATE nimqulo_conversations SET avatar_media_id=$2 WHERE id=$1",[groupId,mediaId]);
+      }
       await this.invite(db,user,groupId,ids);
       await this.event(db,await this.members(db,groupId),"group",groupId);
       return {id:groupId};
@@ -332,11 +337,12 @@ export class MessengerStore {
     const people=await Promise.all(rows.map(r=>this.person({...r,connected:r.status==="accepted",requested:r.status==="pending"&&r.requester_id===user})));
     const requests=rows.filter(r=>r.status==="pending"&&!r.blocked).map(r=>({id:r.connection_id,person:people.find(p=>p.id===r.user_id)!,age:"Pending",direction:r.requester_id===user?"outgoing" as const:"incoming" as const}));
     const {rows:convs}=await this.pool.query(`SELECT c.*,m.read_seq,m.start_seq,m.role,
-      p.display_name,p.username,peer.avatar_url,peer.avatar_key,other.user_id AS peer_id,
+      p.display_name,p.username,peer.avatar_url,CASE WHEN c.kind='group' THEN photo.object_key ELSE peer.avatar_key END AS avatar_key,other.user_id AS peer_id,
       last.body AS last_body,last.image_id AS last_image,last.deleted AS last_deleted,last.created_at AS last_at,
       (SELECT count(*)::int FROM nimqulo_messages msg WHERE msg.conversation_id=c.id AND msg.seq>greatest(m.read_seq,m.start_seq-1) AND msg.author_id<>$1) AS unread
       FROM nimqulo_conversations c JOIN nimqulo_memberships m ON m.conversation_id=c.id AND m.user_id=$1 AND m.end_seq IS NULL
       LEFT JOIN LATERAL(SELECT user_id FROM nimqulo_memberships WHERE conversation_id=c.id AND user_id<>$1 AND end_seq IS NULL LIMIT 1) other ON c.kind='direct'
+      LEFT JOIN nimqulo_media photo ON photo.id=c.avatar_media_id
       LEFT JOIN nimqulo_profiles p ON p.user_id=other.user_id
       LEFT JOIN nimqulo_accounts peer ON peer.user_id=other.user_id
       LEFT JOIN LATERAL(SELECT body,image_id,deleted,created_at FROM nimqulo_messages WHERE conversation_id=c.id AND seq>=m.start_seq ORDER BY seq DESC LIMIT 1) last ON true
@@ -345,7 +351,7 @@ export class MessengerStore {
     const groups:Snapshot["groups"]=[];
     for(const c of convs.filter(c=>c.kind==="group")) {
       const {rows:members}=await this.pool.query("SELECT p.*,a.avatar_url,a.avatar_key,m.role FROM nimqulo_memberships m LEFT JOIN nimqulo_profiles p USING(user_id) LEFT JOIN nimqulo_accounts a ON a.user_id=m.user_id WHERE m.conversation_id=$1 AND m.end_seq IS NULL ORDER BY m.joined_at,m.user_id",[c.id]);
-      groups.push({id:c.id,name:c.name,added:true,myRole:c.role,members:await Promise.all(members.map(async r=>({person:await this.person(r),role:r.role})))});
+      groups.push({id:c.id,name:c.name,...(c.avatar_url?{avatar:{uri:c.avatar_url}}:{}),added:true,myRole:c.role,members:await Promise.all(members.map(async r=>({person:await this.person(r),role:r.role})))});
     }
     const {rows:invitations}=await this.pool.query("SELECT i.id,c.name,p.display_name AS invited_by,i.status FROM nimqulo_invitations i JOIN nimqulo_conversations c ON c.id=i.conversation_id LEFT JOIN nimqulo_profiles p ON p.user_id=i.inviter_id WHERE i.recipient_id=$1 ORDER BY i.created_at DESC LIMIT 100",[user]);
     return {people,requests,groups,invitations:invitations.map(r=>({id:r.id,name:r.name,invitedBy:r.invited_by||"Deleted account",status:r.status})),blocked:people.filter(p=>p.blocked),

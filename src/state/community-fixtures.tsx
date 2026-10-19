@@ -13,7 +13,8 @@ function useCommunityState(){
  const run=(action:()=>Promise<unknown>)=>{void perform(action).catch(()=>{});};
  return {groups:snapshot.groups,invitations:snapshot.invitations,blocked:snapshot.blocked,appearance,notifications,previews,setPreviews:(value:boolean)=>savePreferences(appearance,notifications,value),preferenceError,preferencesReady,preferencesBusy,
  retryPreferences:()=>{setPreferencesReady(false);setPreferenceError("");setRetry(value=>value+1);},
- async saveGroup(name:string,ids:readonly string[],_avatar:unknown,id?:string){return perform(()=>api.saveGroup(name,ids,id));},
+ uploadGroupPhoto:(uri:string)=>api.uploadImage(uri),
+ async saveGroup(name:string,ids:readonly string[],mediaId?:string,id?:string){return perform(()=>api.saveGroup(name,ids,id,mediaId));},
  decideInvitation:(id:string,status:"accepted"|"declined")=>run(()=>api.decideInvitation(id,status)),
  setRole:(groupId:string,personId:string,role:"Admin"|"Member")=>run(()=>api.manageMember(groupId,personId,role)),
  transferOwner:(groupId:string,personId:string)=>run(()=>api.manageMember(groupId,personId,"transfer")),

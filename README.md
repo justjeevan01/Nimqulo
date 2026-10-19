@@ -14,8 +14,8 @@ Administrator approval is required after Google sign-in. The release backend is 
 
 - Google sign-in with administrator-approved access.
 - Profiles, unique usernames, username autocomplete, and connection requests.
-- Direct messages and invitation-based groups with owner/admin roles.
-- Realtime text and photo messages, date separators, swipe to reply, read receipts, and animated typing indicators.
+- Direct messages and invitation-based groups with owner/admin roles and editable group photos.
+- Realtime text and photo messages from the camera or gallery, date separators, swipe to reply, read receipts, and animated typing indicators.
 - Unread counts, request/invitation badges, Android push notifications, and configurable notification previews.
 - Cached conversations and drafts, clear send failures, and manual retry after reconnecting.
 - Blocking, reporting, moderation, account suspension, and account deletion.
@@ -35,10 +35,10 @@ The release APK runs independently of a development computer, Metro, Expo Go, or
 SHA-256:
 
 ```text
-7e43da4ff39f4facf789af523ceb46ec38df68a2ad506113dbba1cc32f89516f
+01e3aa802793a97e56b9014d44c8f11358d7413bb8087c5ee93a20628cdc8927
 ```
 
-Package: `com.jeeva.nimqulo` · Version code: `4` · Exact size: `36,564,298` bytes.
+Package: `com.jeeva.nimqulo` · Version code: `5` · Exact size: `36,566,150` bytes.
 
 </details>
 

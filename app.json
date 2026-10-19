@@ -19,7 +19,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "icon": "./assets/images/app-icon.png",
-      "versionCode": 4
+      "versionCode": 5
     },
     "web": {
       "output": "single",
@@ -47,8 +47,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Nimqulo to choose your profile photo.",
-          "cameraPermission": false,
+          "photosPermission": "Allow Nimqulo to choose photos to share in chats and profiles.",
+          "cameraPermission": "Allow Nimqulo to take photos to share in chats.",
           "microphonePermission": false
         }
       ],
