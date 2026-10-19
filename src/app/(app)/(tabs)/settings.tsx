@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/expo";
+import { useUser } from "@/state/auth";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { useCommunity } from "@/state/community-fixtures";
@@ -34,7 +34,7 @@ export default function SettingsRoute() {
     finally { setRequesting(false); }
   }
   return <TabContent><SettingsScreen
-    person={{ id: user?.id || "", name: profile?.displayName || "Your profile", username: profile?.username || "", avatar: user?.imageUrl ? { uri: user.imageUrl } : undefined }}
+    person={{ id: user?.id || "", name: profile?.displayName || "Your profile", username: profile?.username || "", avatar: profile?.avatarUrl?{uri:profile.avatarUrl}:user?.imageUrl ? { uri: user.imageUrl } : undefined }}
     appearance={appearance} notifications={notifications && permissionGranted === true}
     previews={previews} onPreviews={preferencesReady&&!preferencesBusy?setPreviews:undefined}
     onModeration={snapshot.operator?()=>router.push("/moderation"):undefined}

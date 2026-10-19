@@ -1,11 +1,11 @@
 type ApprovalUser = {
-  publicMetadata?: Record<string, unknown> | null;
+  approved?: unknown;
 };
 
-// Public metadata is readable by the app but writable only by Clerk administrators/server code.
-// Missing or malformed approval never grants access. Editable unsafeMetadata is not consulted.
+// Firebase custom claims are set only by the administrator/server. The API
+// independently checks current approval, Google identity and account status.
 export function isAccountApproved(user: ApprovalUser | null | undefined): boolean {
-  return user?.publicMetadata?.approved === true;
+  return user?.approved === true;
 }
 
 export function getPostSignInRoute(user: ApprovalUser | null | undefined) {

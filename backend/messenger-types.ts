@@ -5,7 +5,7 @@ export type ConversationRecord = { id: string; kind: "direct" | "group"; title: 
 export type MessageReply = { id:string; authorId:string; name:string; text:string; unavailable?:boolean };
 export type TypingActivity = { conversationId:string;userId:string;name:string;typing:boolean;expiresAt:number };
 export type TypingPublisher = (recipients:readonly string[],activity:TypingActivity)=>Promise<void>;
-export type MessageRecord = { id: string; conversationId: string; authorId: string; retryId: string; seq: number; text: string; deleted: boolean; createdAt: string; sender: PersonRecord; reply?:MessageReply; readBy?:number; recipientCount?:number };
+export type MessageRecord = { id: string; conversationId: string; authorId: string; retryId: string; seq: number; text: string; imageId?:string; deleted: boolean; createdAt: string; sender: PersonRecord; reply?:MessageReply; readBy?:number; recipientCount?:number };
 export type Snapshot = {
   people: PersonRecord[];
   requests: { id: string; person: PersonRecord; age: string; direction: "incoming" | "outgoing" }[];

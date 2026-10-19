@@ -1,57 +1,37 @@
-# Clerk authentication
+# Android authentication
 
-The custom Google button uses `useSSO` from `@clerk/expo`. Google remains the sign-in method. Profile names/usernames persist through the authenticated Neon API and optional profile photos use Clerk. The root `ClerkProvider` restores Android sessions using SecureStore token/resource caches. Expo Router guards the app group with authentication and admin approval; backend authorization is enforced independently. Signing out removes protected access and clears account-scoped application caches.
+Nimqulo uses native Google sign-in through Android Credential Manager and Firebase Authentication. No purchased domain is required. The public OAuth client ID is passed explicitly to the native Google SDK because resource shrinking removes its reflection-based auto-detection resource. SDK configuration runs inside the sign-in action so a configuration error cannot crash route loading. The Android configuration is `google-services.json`; the Firebase Admin service-account credential belongs only on the backend.
 
-## Approval and the first screen after sign-in
+## Approval and onboarding
 
-After each fresh Google sign-in, an approved account enters `/profile-setup` immediately and an unapproved account enters `/access-required`. Confirm saves the profile and opens `/home`. A previously confirmed session restores to Chats after app restart; a new Clerk session still requires confirmation.
+A fresh Google sign-in sends an administrator-approved account to `/profile-setup`. Confirm persists a valid display name and username through the authenticated API and opens `/home`. A confirmed session restores Chats after restart. Other accounts see `/access-required`. Completing a profile, accepting an invitation, or changing a display name cannot grant approval.
 
-Frontend approval is read exclusively from `user.publicMetadata.approved === true`. Missing values, `false`, strings such as `"true"`, and editable `unsafeMetadata` deny access. The backend also verifies the Clerk session, verified Google identity, approval, backend account status and active phone. Profile completion never grants approval.
+Approval is a strict boolean Firebase custom claim. Administrators can review accounts under **Settings ? Moderation** and approve or revoke access. The operator commands below are also available for maintenance. The API independently reads current Firebase approval, requires a verified Google identity, checks revocation and account status, and enforces one active phone. An old token cannot reactivate a signed-out or replaced session. Same-second sign-ins cannot share a binding; a rejected simultaneous login must sign in again.
 
-To approve an account, open **Clerk Dashboard → Users → the user → Metadata → Public metadata** and merge this field into its existing JSON:
-
-```json
-{ "approved": true }
+```sh
+npm run access -- list
+npm run access -- approve person@example.com
+npm run access -- revoke person@example.com
 ```
 
-To leave an account pending or revoke approval, set `approved` to `false` or remove it. The updated value is checked on the next sign-in/user refresh. Never put approval in Unsafe metadata, and never approve an account from mobile code. Invitations and account creation do not automatically set this field. Current accounts without the explicit flag will see Access Required.
+These local commands require the ignored `.env.release` server credentials. A person must first sign in with Google to appear in the list. The initial limit is 20 approved active accounts. The command preserves other custom claims and does not reactivate suspended or deleted accounts. Revocation disables the stored phone binding and removes its push token. Operator IDs for moderation are separately configured in the backend environment.
 
-The client routing gate is backed by independent authorization on every backend API. See [messenger implementation](messenger.md) and [Clerk's metadata trust model](https://clerk.com/docs/guides/users/extending).
+## Configuration
 
-## Local configuration
+1. Enable Google in Firebase Authentication for project `nimqulo`.
+2. Register Android package `com.jeeva.nimqulo` and the existing EAS signing certificate SHA-1 in Firebase.
+3. Download the updated `google-services.json` into the root. This is public Android configuration, not a private key.
+4. Keep the base64-encoded Admin service-account JSON in `FIREBASE_ADMIN_CONFIG` on the server, alongside `FIREBASE_PROJECT_ID`. Never prefix these with `EXPO_PUBLIC_` or include them in an APK.
+5. Build with EAS after changing native authentication modules. Expo Go and previous APKs do not include the new modules.
 
-Use the existing Clerk application selected in the dashboard: `app_3KoisFY1IIKzxxwvMPxzoUyCYgG`. Do not provision another app or replace working keys.
+Firebase persists native credentials. A per-login UUID is stored in SecureStore and combined with the verified authentication time for the backend session binding. ID-token refresh preserves this binding. Sign-out first revokes the current backend binding, then signs out Firebase, clears account caches and returns to `/`. Connectivity failures offer a retry instead of claiming the backend session was revoked.
 
-Set `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` in an ignored `.env` file, using that application's publishable key. `.env.example` lists the required variable. Never put a Clerk secret key into an `EXPO_PUBLIC_*` variable or mobile code.
+Optional profile photos are uploaded to private Neon storage. Names, immutable case-insensitive usernames (3?24 letters, numbers or underscores), preferences and application state remain in Postgres.
 
-Clerk CLI login/linking is separate from the running mobile integration. To manage this application from the CLI, run `npx -y clerk@latest auth login` in your terminal, followed by `npx -y clerk@latest link --app app_3KoisFY1IIKzxxwvMPxzoUyCYgG`. The mobile client does not need a `CLERK_SECRET_KEY`; the CLI doctor may report its absence because account administration needs server credentials.
+## Verification
 
-In the Clerk dashboard:
+Check Google cancellation, pending-account rejection, approval then fresh sign-in, valid profile confirmation, restart restoration, sign-out, and a second phone replacing the first. Also check suspended/deleted accounts and denied/offline API requests. Record native acceptance separately from unit or isolated database checks; neither proves Google consent on another physical phone.
 
-- Enable Google under Social connections.
-- Enable the Native API under Native applications.
-- Register `triplyai://sso-callback` as an allowed native redirect URL. For local web testing, also register `http://localhost:8081/sso-callback` (use the actual port if different).
-- Keep Clerk's sign-up restrictions/invitations configured for the pilot, and set the explicit Public metadata approval field for each account you approve. If Clerk rejects account creation before a session exists, the restricted-sign-up response also opens Access Required.
+**Contact Support** opens `mailto:jeevanofficial1120@gmail.com`. **Return to Sign In** ends the local authentication session.
 
-This flow handles Google sign-in and sign-up together. Configure required fields so Google supplies them. If the instance requires extra fields, MFA, or device verification, the screen reports the incomplete authentication without granting access; those continuation screens are not implemented yet.
-
-Run `npx expo start` for local development. For a reliable native redirect, use a development build with the `triplyai` scheme rather than Expo Go. Rebuild after adding the SecureStore/config plugins. No Google native sign-in client IDs are needed for this browser-based SSO flow.
-
-## Verify with a real account
-
-1. While signed out, open `/home` and confirm the sign-in screen appears.
-2. Select **Continue with Google**. Cancel and confirm the button becomes available again without an error.
-3. Select a Google account with Public metadata `approved: true`. Confirm profile setup opens immediately. Enter a valid display name and username (3–24 letters, numbers, or underscores), press Confirm, and verify Chats Home opens. Use the existing username when confirming a returning account.
-4. Reload the web page or restart the native app. Confirm the session is restored.
-5. Select **Sign out** and confirm the sign-in screen appears and `/home` is inaccessible.
-6. Sign in to an account with no approval flag (or `approved: false`) and confirm Access Required appears. Opening `/home` or `/profile-setup` directly must not bypass it. Also try a non-invited account and confirm the configured Clerk sign-up policy rejects it.
-
-No test accounts are created automatically. Completing Google consent requires the account owner.
-
-## Access-required screen
-
-`/access-required` displays the not-approved state. A `sign_up_mode_restricted` response from Clerk's Google flow opens it automatically. Other authentication failures retain their existing error handling. The route itself does not set or change approval status.
-
-**Contact Support** opens a draft email to `jeevanofficial1120@gmail.com` with the subject `Nimqulo account access`. If no email app is available, the address is shown on screen. **Return to Sign In** signs out an active session before navigating to `/`.
-
-References: [Expo quickstart](https://clerk.com/docs/expo/getting-started/quickstart), [SSO hook](https://clerk.com/docs/reference/expo/native-hooks/use-sso), [Expo protected routes](https://docs.expo.dev/router/advanced/protected/).
+References: [Expo Google authentication](https://docs.expo.dev/guides/google-authentication/), [Firebase Android Google sign-in](https://firebase.google.com/docs/auth/android/google-signin), [Firebase token verification](https://firebase.google.com/docs/auth/admin/verify-id-tokens).

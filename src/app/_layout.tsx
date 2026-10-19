@@ -1,20 +1,12 @@
 import "../../global.css";
 import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ClerkProvider, useAuth, useUser } from "@clerk/expo";
-import { tokenCache } from "@clerk/expo/token-cache";
-import { resourceCache } from "@clerk/expo/resource-cache";
+import { AuthProvider, useAuth, useUser } from "@/state/auth";
 import { ActivityIndicator, View } from "react-native";
-import * as WebBrowser from "expo-web-browser";
 import { getPostSignInRoute, isAccountApproved } from "@/lib/access";
 import { useAccessFailureRouting } from "@/state/messenger";
 import { useEffect } from "react";
 import { clearPrivateCache } from "@/lib/local-cache";
-
-// The web popup also loads this layout when it redirects to /sso-callback.
-WebBrowser.maybeCompleteAuthSession();
-
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 function AuthNavigator() {
   useAccessFailureRouting();
@@ -24,7 +16,7 @@ function AuthNavigator() {
   const { user, isLoaded: userLoaded } = useUser();
   const isStatusScreen = ["/offline", "/account-suspended", "/concurrent-session"].includes(pathname);
   const isSignInScreen = pathname === "/";
-  // Status pages contain no account data and must render even while Clerk is offline.
+  // Status pages contain no account data and must render even while authentication is offline.
   // Resolve both identity and admin approval before mounting any protected screen.
   if ((!authLoaded || !userLoaded) && !isStatusScreen && !isSignInScreen) return <View style={{ flex: 1, backgroundColor: "#020B18", alignItems: "center", justifyContent: "center" }}><ActivityIndicator color="#008BFF" /></View>;
   return (
@@ -36,19 +28,15 @@ function AuthNavigator() {
         <Stack.Screen name="(app)" />
       </Stack.Protected>
       <Stack.Screen name="access-required" />
-      <Stack.Screen name="sso-callback" />
     </Stack>
   );
 }
 
 export default function RootLayout() {
-  if (!publishableKey) {
-    throw new Error("Set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your local environment before starting Nimqulo.");
-  }
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache} __experimental_resourceCache={resourceCache} __experimental_disableNativeClientSync>
+    <AuthProvider>
       <StatusBar style="light" />
       <AuthNavigator />
-    </ClerkProvider>
+    </AuthProvider>
   );
 }

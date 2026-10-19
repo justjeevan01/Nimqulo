@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { ServiceError, validId, type Identity, type TypingPublisher } from "./messenger-types.ts";
 import type { MessengerStore } from "./messenger-store.ts";
+import { MAX_IMAGE_BYTES } from "./image.ts";
 
 export type AppEnv = { Variables: { userId: string; identity: Identity; requestId: string } };
 export function messengerRoutes(store: MessengerStore,publishTyping?:TypingPublisher) {
@@ -22,6 +23,7 @@ export function messengerRoutes(store: MessengerStore,publishTyping?:TypingPubli
     return c.json({ ok: true });
   });
   app.get("/session", c=>c.json({id:c.get("userId"),sessionId:c.get("identity").sessionId}));
+  app.delete("/session",async c=>{await store.mutate(c.get("userId"),async db=>{await db.query("UPDATE nimqulo_devices SET revoked=true,push_token=NULL WHERE user_id=$1 AND session_id=$2",[c.get("userId"),c.get("identity").sessionId]);await store.event(db,[c.get("userId")],"session");});return c.body(null,204);});
   app.get("/community", async c=>c.json(await store.snapshot(c.get("userId"))));
   app.get("/people", async c=>c.json(await store.lookup(c.get("userId"),c.req.query("username")||"")));
   app.post("/connections",async c=>{const b=await c.req.json();if(typeof b.targetId!=="string")throw new ServiceError(400,"Choose a person.");await store.requestConnection(c.get("userId"),b.targetId);return c.body(null,204);});
@@ -36,7 +38,9 @@ export function messengerRoutes(store: MessengerStore,publishTyping?:TypingPubli
   });
   app.post("/invitations/:id/decision",async c=>{const b=await c.req.json();if(!["accepted","declined"].includes(b.status))throw new ServiceError(400,"Choose a decision.");await store.decideInvitation(c.get("userId"),c.req.param("id"),b.status);return c.body(null,204);});
   app.get("/conversations/:id/messages",async c=>c.json(await store.messages(c.get("userId"),c.req.param("id"),c.req.query("before")===undefined?undefined:Number(c.req.query("before")))));
-  app.post("/conversations/:id/messages",async c=>{const b=await c.req.json();return c.json(await store.send(c.get("userId"),c.req.param("id"),b.text,b.retryId,b.replyToId),201);});
+  app.post("/conversations/:id/messages",async c=>{const b=await c.req.json();return c.json(await store.send(c.get("userId"),c.req.param("id"),b.text,b.retryId,b.replyToId,b.imageId),201);});
+  app.post("/conversations/:id/images/:retryId",bodyLimit({maxSize:MAX_IMAGE_BYTES}),async c=>c.json(await store.uploadChatImage(c.get("userId"),c.req.param("id"),c.req.param("retryId"),new Uint8Array(await c.req.arrayBuffer())),201));
+  app.get("/conversations/:id/images/:imageId",async c=>c.json(await store.chatImage(c.get("userId"),c.req.param("id"),c.req.param("imageId"))));
   app.put("/conversations/:id/read",async c=>{const b=await c.req.json();await store.read(c.get("userId"),c.req.param("id"),b.seq);return c.body(null,204);});
   app.post("/conversations/:id/typing",async c=>{
     const body=await c.req.json();if(typeof body.typing!=="boolean")throw new ServiceError(400,"Invalid typing state.");

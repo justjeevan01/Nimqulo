@@ -1,56 +1,92 @@
-# Welcome to your Expo app 👋
+﻿# Nimqulo
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+<img src="assets/images/app-icon.png" alt="Nimqulo app icon" width="96" height="96" />
 
-## Get started
+An Android messenger for trusted connections, private conversations, and small groups.
 
-1. Install dependencies
+**[Download Nimqulo-v1.apk](https://nimqulo-downloads.nimqulo-realtime.workers.dev/Nimqulo-v1.apk)**
 
-   ```bash
-   npm install
-   ```
+Signed release APK · 36.6 MB · Android 7.0+ · ARM32/ARM64
 
-2. Start the app
+Administrator approval is required after Google sign-in. The release backend is deployed; two-phone acceptance testing remains outstanding.
 
-   ```bash
-   npx expo start
-   ```
+## Features
 
-In the output, you'll find options to open the app in a
+- Google sign-in with administrator-approved access.
+- Profiles, unique usernames, exact-username search, and connection requests.
+- Direct messages and invitation-based groups with owner/admin roles.
+- Realtime text and photo messages, date separators, swipe to reply, read receipts, and animated typing indicators.
+- Unread counts, Android push notifications, and configurable notification previews.
+- Cached conversations and drafts, clear send failures, and manual retry after reconnecting.
+- Blocking, reporting, moderation, account suspension, and account deletion.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Install on Android
 
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+1. Download the release APK using the link above.
+2. Allow your browser or file manager to install this app when Android asks.
+3. Install Nimqulo and sign in with Google.
+4. Wait for administrator approval, then confirm your display name and username to open Chats.
 
-## Get a fresh project
+The release APK runs independently of a development computer, Metro, Expo Go, or Google Play. Updates must use an APK signed with the same signing key. The initial rollout allows up to 20 approved accounts; downloading the APK does not grant access automatically.
 
-When you're ready, run:
+<details>
+<summary>Verify the APK</summary>
 
-```bash
-npm run reset-project
+SHA-256:
+
+```text
+cf14f7d77e285ee0cac23757b04497f08de0490b06d63fd6b34d3a59058685aa
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Package: `com.jeeva.nimqulo` · Version code: `3` · Exact size: `36,562,334` bytes.
 
-### Other setup steps
+</details>
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Privacy and safety
 
-## Learn more
+Access is checked by the backend for every protected operation. Notification message previews default to off. Blocking prevents new direct contact; existing shared-group messages remain visible.
 
-To learn more about developing your project with Expo, look at the following resources:
+Nimqulo is **not end-to-end encrypted**. Account deletion cannot recall screenshots, previously displayed notifications, or offline copies held by other users.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Development
 
-## Join the community
+Built with Expo SDK 58, React Native, TypeScript, Expo Router native tabs, Firebase Authentication, Neon Postgres/Functions/Object Storage, and a Cloudflare WebSocket coordinator. Android is the supported platform.
 
-Join our community of developers creating universal apps.
+```sh
+npm ci
+# Configure local development values using .env.example.
+npm start
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Native features require an Android development build. Use a separate database and service credentials for development; never put server secrets in `EXPO_PUBLIC_*` variables or commit environment files.
+
+```sh
+npm run lint
+npm run typecheck
+npm test
+npm run test:realtime
+npm run build
+```
+
+Database integration tests require an explicitly isolated Neon endpoint; see [backend implementation and validation](docs/messenger.md). See [release preparation](docs/release.md) for build configuration, the release checklist, and validation details.
+
+## Project structure
+
+- `src/` — Android screens, navigation, components, and client state.
+- `assets/` — app icons, fonts, and artwork used by the app.
+- `backend/` — authenticated API and database migrations.
+- `realtime/` — Cloudflare messaging coordinator and its tests.
+- `downloads/` — public APK download with the release filename.
+- `plugins/` — native Android configuration plugins.
+- `scripts/` and `tests/` — build, maintenance, and validation tools.
+- `docs/` — authentication, development, backend, and release guides.
+
+Local credentials, generated builds, dependencies, and editor/agent files are excluded from Git. Keep `google-services.json` locally and configure its EAS file variable for cloud builds; never commit Firebase Admin keys.
+
+## Support
+
+For access requests and support, email [jeevanofficial1120@gmail.com](mailto:jeevanofficial1120@gmail.com).
+
+## License
+
+[MIT](LICENSE).

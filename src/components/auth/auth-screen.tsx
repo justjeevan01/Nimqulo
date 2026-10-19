@@ -60,7 +60,6 @@ export function AuthScreen({ onGoogleSignIn, isReady, isSigningIn, error }: Auth
                 {isSigningIn ? <ActivityIndicator color="#CFDDF5" /> : <Image source={arrow} style={{ width: 27 * scale, height: 27 * scale }} accessible={false} />}
               </View>
             </Pressable>
-            <View nativeID="clerk-captcha" />
           </View>
           {error && (
             <View style={[styles.errorPanel, { top: screenHeight * 0.57, marginHorizontal: 22 * scale }]}>

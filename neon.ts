@@ -7,8 +7,8 @@ export default defineConfig({
     api: {
       name: "Nimqulo API", source: "./backend/index.ts",
       env: {
-        CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY!,
-        CLERK_ISSUER_URL: process.env.CLERK_ISSUER_URL!,
+        FIREBASE_ADMIN_CONFIG:process.env.FIREBASE_ADMIN_CONFIG!,
+        FIREBASE_PROJECT_ID:process.env.FIREBASE_PROJECT_ID!,
         APP_ORIGINS: process.env.APP_ORIGINS || "http://localhost:8081,http://localhost:8082,http://localhost:19006,triplyai://",
         ...(process.env.REALTIME_SERVICE_KEY ? { REALTIME_SERVICE_KEY: process.env.REALTIME_SERVICE_KEY } : {}),
         ...(process.env.REALTIME_URL ? { REALTIME_URL: process.env.REALTIME_URL } : {}),
@@ -25,6 +25,8 @@ export default defineConfig({
   },
   // Branch policy: per-branch tuning
   branch: (branch) => {
+    // The user-facing release database must never inherit a preview expiry.
+    if (branch.name === "pilot") return {};
     if (branch.isDefault) {
       // Default branch: no overrides, uses project defaults
       return {};

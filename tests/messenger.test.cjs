@@ -19,7 +19,12 @@ test("messenger transactions enforce authorization and lifecycle rules on Postgr
   const prefix = `qa_${randomUUID().replaceAll("-", "").slice(0,8)}`;
   const users = Array.from({ length: 23 }, (_, i) => `${prefix}_${i}`);
   const [alice,bob,eve] = users;
-  const store = new MessengerStore(pool, [alice]);
+  const objects=new Map();
+  const store = new MessengerStore(pool, [alice],{
+    upload:async(key,bytes)=>{objects.set(key,Buffer.from(bytes));},
+    url:async key=>{assert.ok(objects.has(key));return `https://private.test/${key}`;},
+    delete:async key=>{objects.delete(key);},
+  });
   async function connect(a,b) {
     await store.requestConnection(a,b);
     const request = (await store.snapshot(b)).requests.find(r=>r.person.id===a);
@@ -156,6 +161,36 @@ test("messenger transactions enforce authorization and lifecycle rules on Postgr
       await store.authorize(second);
       await store.session.run(first,()=>assert.rejects(store.send(alice,direct,"stale session",randomUUID()),{code:"SESSION_REPLACED"}));
     });
+    await t.test("same-second phone logins stay isolated and signing out revokes the binding",async()=>{
+      const user=users[4],device=randomUUID(),first={id:user,approved:true,sessionId:`500.${randomUUID()}`,sessionStarted:500000};
+      await store.authorize(first,device);
+      await assert.rejects(store.authorize({...first,sessionId:`500.${randomUUID()}`},randomUUID()),{code:"SESSION_REPLACED"});
+      const {createApp}=await import("../backend/app.ts");
+      const app=createApp({messenger:store,authenticate:async()=>first},[]);
+      assert.equal((await app.request("/session",{method:"DELETE",headers:{Authorization:"Bearer qa"}})).status,204);
+      await assert.rejects(store.authorize(first,device),{code:"SESSION_EXPIRED"});
+      await assert.rejects(store.authorize(first),{code:"SESSION_EXPIRED"});
+      await store.authorize({...first,sessionId:`501.${randomUUID()}`,sessionStarted:501000},randomUUID());
+      assert.equal((await pool.query("SELECT revoked FROM nimqulo_devices WHERE user_id=$1",[user])).rows[0].revoked,false);
+    });
+    await t.test("account approval is operator-only, preserves claims and enforces capacity and status",async()=>{
+      const {createAccessAdmin}=await import("../backend/access-admin.ts");
+      const target={uid:users[21],email:"qa@example.com",emailVerified:true,disabled:false,displayName:"Pending Google account",customClaims:{approved:false,other:"keep"},providerData:[{providerId:"google.com",email:"qa@example.com"}]};
+      let updates=0,lookups=0;
+      const access=createAccessAdmin({async listUsers(){lookups++;return {users:[target,{...target,uid:users[22],providerData:[]}]};},async getUser(id){lookups++;assert.equal(id,target.uid);return target;},async setCustomUserClaims(id,claims){assert.equal(id,target.uid);updates++;target.customClaims=claims;}},store);
+      await assert.rejects(access.list(bob),{status:403});await assert.rejects(access.decide(bob,target.uid,true),{status:403});assert.equal(lookups,0);
+      assert.equal((await access.list(alice)).accounts.length,1,"non-Google identities must not appear");
+      await assert.rejects(access.decide(alice,alice,false),{status:403});
+      await assert.rejects(access.decide(alice,target.uid,true),{code:"PILOT_FULL"});assert.equal(updates,0);
+      await pool.query("UPDATE nimqulo_accounts SET approved=false WHERE user_id=$1",[users[19]]);
+      await access.decide(alice,target.uid,true);assert.deepEqual(target.customClaims,{approved:true,other:"keep"});
+      assert.equal((await pool.query("SELECT approved FROM nimqulo_accounts WHERE user_id=$1",[target.uid])).rows[0].approved,true);
+      await store.authorize({id:target.uid,approved:true,sessionId:"qa_approval",sessionStarted:800},randomUUID());await store.device(target.uid,"ExpoPushToken[qa-approval]");
+      await access.decide(alice,target.uid,false);
+      assert.deepEqual((await pool.query("SELECT revoked,push_token FROM nimqulo_devices WHERE user_id=$1",[target.uid])).rows[0],{revoked:true,push_token:null});
+      await pool.query("UPDATE nimqulo_accounts SET status='suspended' WHERE user_id=$1",[target.uid]);await assert.rejects(access.decide(alice,target.uid,true),{status:403});
+      await pool.query("UPDATE nimqulo_accounts SET status='active' WHERE user_id=$1",[target.uid]);await pool.query("UPDATE nimqulo_accounts SET approved=true WHERE user_id=$1",[users[19]]);
+    });
     await t.test("HTTP routes enforce sessions, membership, operator permissions, and validation",async()=>{
       const {createApp}=await import("../backend/app.ts");
       const identity={id:bob,approved:true,sessionId:"qa_http",sessionStarted:400};
@@ -180,6 +215,55 @@ test("messenger transactions enforce authorization and lifecycle rules on Postgr
       assert.equal((await request("/groups","POST",{name:"x".repeat(25000),invitees:[]})).status,413);
       assert.equal((await app.request("/internal/realtime",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"})).status,401);
       assert.equal((await app.request("/internal/sweep",{method:"POST",body:"{}"})).status,401);
+    });
+    await t.test("private photo sharing validates ownership, retry safety, blocks, and membership periods",async()=>{
+      const bytes=Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1S8AAAAASUVORK5CYII=","base64");
+      const retry=randomUUID();
+      await assert.rejects(store.uploadChatImage(eve,direct,retry,bytes),{status:403});
+      await assert.rejects(store.uploadChatImage(alice,direct,retry,Buffer.from("not a picture")),{status:400});
+      const uploads=await Promise.all([store.uploadChatImage(alice,direct,retry,bytes),store.uploadChatImage(alice,direct,retry,bytes)]);
+      assert.equal(uploads[0].id,uploads[1].id);assert.equal(objects.size,1);
+      const imageId=uploads[0].id;
+      await assert.rejects(store.chatImage(bob,direct,imageId),{status:404},"unpublished uploads cannot be viewed");
+      await assert.rejects(store.uploadChatImage(alice,direct,retry,Buffer.concat([bytes,Buffer.from("different")])),{status:409});
+      await assert.rejects(store.send(bob,direct,"Stolen image",randomUUID(),undefined,imageId),{status:403});
+      await assert.rejects(store.send(alice,group,"Wrong chat",retry,undefined,imageId),{status:403});
+      const message=await store.send(alice,direct,"",retry,undefined,imageId);
+      assert.equal(message.imageId,imageId);assert.equal(message.text,"");
+      assert.equal((await store.send(alice,direct,"",retry,undefined,imageId)).id,message.id);
+      await assert.rejects(store.send(alice,direct,"",retry),{status:400});
+      const url=(await store.chatImage(bob,direct,imageId)).url;
+      assert.ok(url.startsWith("https://private.test/messages/"));
+      await assert.rejects(store.chatImage(eve,direct,imageId),{status:403});
+      assert.equal((await store.snapshot(bob)).conversations.find(c=>c.id===direct).message,"Photo");
+      const quoted=await store.send(bob,direct,"Nice photo",randomUUID(),message.id);assert.equal(quoted.reply.text,"Photo");
+      await store.block(bob,alice,true);
+      await assert.rejects(store.chatImage(bob,direct,imageId),{status:403});
+      await assert.rejects(store.uploadChatImage(alice,direct,randomUUID(),bytes),{status:403});
+      await store.block(bob,alice,false);await connect(alice,bob);
+      const groupRetry=randomUUID(),groupImage=(await store.uploadChatImage(alice,group,groupRetry,bytes)).id;
+      await store.send(alice,group,"Group photo",groupRetry,undefined,groupImage);
+      assert.ok((await store.chatImage(eve,group,groupImage)).url);
+      await store.manageMember(alice,group,eve,"remove");
+      await assert.rejects(store.chatImage(eve,group,groupImage),{status:403});
+      await store.saveGroup(alice,"QA Group",[eve],group);
+      const invitation=(await store.snapshot(eve)).invitations.find(i=>i.status==="pending"&&i.name==="QA Group");
+      await store.decideInvitation(eve,invitation.id,"accepted");
+      await assert.rejects(store.chatImage(eve,group,groupImage),{status:404},"rejoining cannot restore earlier photos");
+      await pool.query("UPDATE nimqulo_messages SET deleted=true,body=NULL WHERE id=$1",[message.id]);
+      assert.equal((await store.messageRecord(pool,message.id,bob)).imageId,undefined);
+      await assert.rejects(store.chatImage(bob,direct,imageId),{status:404});
+    });
+    await t.test("chat image HTTP uploads keep their 5 MB limit and authenticate before storage",async()=>{
+      const {createApp}=await import("../backend/app.ts");
+      const app=createApp({messenger:store,authenticate:async()=>({id:bob,approved:true,sessionId:"qa_http",sessionStarted:400})},[]);
+      const image=Buffer.alloc(26000);Buffer.from([137,80,78,71,13,10,26,10]).copy(image);
+      const retry=randomUUID(),path=`/conversations/${direct}/images/${retry}`;
+      assert.equal((await app.request(path,{method:"POST",body:image})).status,401);
+      const response=await app.request(path,{method:"POST",headers:{Authorization:"Bearer qa"},body:image});
+      assert.equal(response.status,201,"24 KB JSON cap must not apply to photos");
+      assert.ok((await response.json()).id);
+      assert.equal((await app.request(`/conversations/${direct}/images/${randomUUID()}`,{method:"POST",headers:{Authorization:"Bearer qa"},body:Buffer.alloc(5242881)})).status,413);
     });
     await t.test("reports are operator-only and suspension blocks mutations",async()=>{
       const report=await store.report(bob,eve,"QA safety report");
@@ -212,15 +296,13 @@ test("messenger transactions enforce authorization and lifecycle rules on Postgr
       let fail=true,pushCalls=0;
       const original=global.fetch;
       global.fetch=async(url,init)=>{
-        if(String(url).includes("api.clerk.com/v1/users/"))return Response.json({public_metadata:{approved:true},primary_email_address_id:"email",email_addresses:[{id:"email",email_address:"qa@example.com",verification:{status:"verified"}}],external_accounts:[{provider:"oauth_google",email_address:"qa@example.com"}]});
-        if(String(url).includes("api.clerk.com/v1/sessions/"))return Response.json({status:"active"});
         if(String(url).includes("realtime.example"))return new Response("",{status:fail?503:200});
         if(String(url).includes("push/send")){pushCalls++;const body=JSON.parse(init.body);assert.equal(body.body,"You have a new message");return fail?new Response("",{status:503}):Response.json({data:{id:"qa_ticket",status:"ok"}});}
         if(String(url).includes("getReceipts"))return Response.json({data:{qa_ticket:{status:"error",details:{error:"DeviceNotRegistered"}}}});
         throw Error("Unexpected service call");
       };
       try{
-        const sweep=createDelivery(store,{realtimeUrl:"https://realtime.example",serviceKey:"qa-key",clerkSecret:"qa-key",deleteObject:async()=>{}});
+        const sweep=createDelivery(store,{realtimeUrl:"https://realtime.example",serviceKey:"qa-key",identity:{active:async()=>true,deleteUser:async()=>{}},deleteObject:async()=>{}});
         await sweep();assert.equal(pushCalls,1,"push is attempted even when realtime fails");
         assert.ok((await store.messages(bob,capacity)).messages.some(m=>m.id===message.id));
         const reset=()=>pool.query("UPDATE nimqulo_events SET available_at=now() WHERE message_id=$1 AND user_id=$2",[message.id,bob]);
@@ -239,7 +321,7 @@ test("messenger transactions enforce authorization and lifecycle rules on Postgr
       try{
         for(const config of [{},{realtimeUrl:"https://realtime.example"},{serviceKey:"qa-key"}]){
           const {rows:[event]}=await pool.query("INSERT INTO nimqulo_events(user_id,kind,push_done) VALUES($1,'qa',true) RETURNING id",[bob]);
-          const sweep=createDelivery(store,{...config,clerkSecret:"qa-key",deleteObject:async()=>{}});
+          const sweep=createDelivery(store,{...config,identity:{active:async()=>true,deleteUser:async()=>{}},deleteObject:async()=>{}});
           await sweep();await sweep();
           const saved=(await pool.query("SELECT realtime_done,push_done,attempts FROM nimqulo_events WHERE id=$1",[event.id])).rows[0];
           assert.deepEqual(saved,{realtime_done:true,push_done:true,attempts:1});

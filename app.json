@@ -18,7 +18,8 @@
         "foregroundImage": "./assets/images/app-icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "icon": "./assets/images/app-icon.png"
+      "icon": "./assets/images/app-icon.png",
+      "versionCode": 3
     },
     "web": {
       "output": "single",
@@ -42,12 +43,6 @@
           "imageWidth": 100
         }
       ],
-      [
-        "@clerk/expo",
-        {
-          "appleSignIn": false
-        }
-      ],
       "expo-secure-store",
       [
         "expo-image-picker",
@@ -63,7 +58,9 @@
           "color": "#0873FF",
           "defaultChannel": "messages"
         }
-      ]
+      ],
+      "@react-native-firebase/app",
+      "react-native-nitro-google-signin"
     ],
     "experiments": {
       "typedRoutes": true,

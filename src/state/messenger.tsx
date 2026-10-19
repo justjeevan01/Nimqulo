@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { AppState, Pressable, Text, View } from "react-native";
-import { useUser } from "@clerk/expo";
+import { useAuth,useUser } from "@/state/auth";
 import { useBackend } from "@/hooks/use-backend";
 import { readCache, writeCache, removeCache, clearPrivateCache } from "@/lib/local-cache";
 import { ApiError, setAccessFailureHandler, type Snapshot } from "@/lib/backend";
@@ -54,4 +54,4 @@ function useMessengerState(){
 const Context=createContext<ReturnType<typeof useMessengerState>|null>(null);
 export function MessengerProvider({children}:PropsWithChildren){const state=useMessengerState();return <Context value={state}>{children}{!!state.error&&<View style={{backgroundColor:"#2A1720",paddingHorizontal:16,paddingVertical:12}}><Text accessibilityRole="alert" style={{fontSize:14,color:"#FFB4BC"}}>{state.error}</Text><Pressable accessibilityRole="button" onPress={()=>void state.retry()} style={{minHeight:48,justifyContent:"center"}}><Text style={{fontSize:16,color:"white"}}>Retry</Text></Pressable></View>}</Context>;}
 export function useMessenger(){const value=useContext(Context);if(!value)throw Error("Missing messenger provider");return value;}
-export function useAccessFailureRouting(){useEffect(()=>setAccessFailureHandler(code=>{clearPrivateCache();router.replace(code==="SUSPENDED"?"/account-suspended":code==="NOT_APPROVED"?"/access-required":"/concurrent-session");}),[]);}
+export function useAccessFailureRouting(){const {denyApproval}=useAuth();useEffect(()=>setAccessFailureHandler(code=>{clearPrivateCache();if(code==="NOT_APPROVED")denyApproval();router.replace(code==="SUSPENDED"?"/account-suspended":code==="NOT_APPROVED"?"/access-required":"/concurrent-session");}),[denyApproval]);}

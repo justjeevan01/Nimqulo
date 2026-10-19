@@ -4,7 +4,7 @@ const access = import('../src/lib/access.ts');
 
 test('an admin-approved account lands on profile setup', async () => {
   const { isAccountApproved, getPostSignInRoute } = await access;
-  const user = { publicMetadata: { approved: true } };
+  const user = { approved: true };
   assert.equal(isAccountApproved(user), true);
   assert.equal(getPostSignInRoute(user), '/profile-setup');
 });
@@ -12,7 +12,7 @@ test('an admin-approved account lands on profile setup', async () => {
 test('missing, pending, or malformed approval lands on Access Required', async () => {
   const { isAccountApproved, getPostSignInRoute } = await access;
   for (const value of [undefined, null, false, 'true', 1, {}, 'approved']) {
-    const user = { publicMetadata: { approved: value } };
+    const user = { approved: value };
     assert.equal(isAccountApproved(user), false);
     assert.equal(getPostSignInRoute(user), '/access-required');
   }
@@ -24,7 +24,7 @@ test('missing, pending, or malformed approval lands on Access Required', async (
 test('editable profile metadata cannot approve an account', async () => {
   const { getPostSignInRoute } = await access;
   assert.equal(getPostSignInRoute({
-    publicMetadata: { approved: false },
+    approved: false,
     unsafeMetadata: { approved: true, profileSetupComplete: true, displayName: 'Alex' },
     username: 'alexcarter',
   }), '/access-required');
@@ -32,8 +32,8 @@ test('editable profile metadata cannot approve an account', async () => {
 
 test('revoking approval blocks a previously approved account', async () => {
   const { getPostSignInRoute } = await access;
-  const user = { publicMetadata: { approved: true } };
+  const user = { approved: true };
   assert.equal(getPostSignInRoute(user), '/profile-setup');
-  user.publicMetadata.approved = false;
+  user.approved = false;
   assert.equal(getPostSignInRoute(user), '/access-required');
 });

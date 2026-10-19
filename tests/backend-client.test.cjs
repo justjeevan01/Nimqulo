@@ -26,3 +26,22 @@ test("app client refreshes credentials and shows actionable connection errors", 
     else process.env.EXPO_PUBLIC_API_URL = originalUrl;
   }
 });
+
+test("Firebase client binds requests to its login and sends photos without leaking credentials to local URIs",async()=>{
+ const originalFetch=global.fetch,originalUrl=process.env.EXPO_PUBLIC_API_URL;
+ process.env.EXPO_PUBLIC_API_URL="https://api.test";
+ try{
+  const {createBackend}=await import("../src/lib/backend.ts");const api=createBackend(async()=>({token:"firebase-token",sessionNonce:"login-nonce"}));
+  const requests=[];
+  global.fetch=async(url,init)=>{
+   if(url==="file:///private/photo.png"){assert.equal(init,undefined);return new Response(new Blob([new Uint8Array(26000)],{type:"image/png"}));}
+   assert.equal(init.headers.Authorization,"Bearer firebase-token");assert.equal(init.headers["X-App-Session"],"login-nonce");requests.push({url,init});
+   return url.endsWith("/images/retry")?Response.json({id:"image"}):Response.json({id:"message",imageId:"image"});
+  };
+  assert.deepEqual(await api.uploadChatImage("chat","file:///private/photo.png","retry"),{id:"image"});
+  assert.equal(requests[0].init.body.size,26000);
+  await api.sendMessage("chat","","retry",undefined,"image");
+  assert.deepEqual(JSON.parse(requests[1].init.body),{text:"",retryId:"retry",imageId:"image"});
+  assert.equal(requests[1].url,"https://api.test/conversations/chat/messages");
+ }finally{global.fetch=originalFetch;if(originalUrl===undefined)delete process.env.EXPO_PUBLIC_API_URL;else process.env.EXPO_PUBLIC_API_URL=originalUrl;}
+});

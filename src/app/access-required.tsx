@@ -1,4 +1,4 @@
-import { useAuth, useUser } from "@clerk/expo";
+import { useAuth, useUser } from "@/state/auth";
 import { Redirect } from "expo-router";
 import { AccessRequiredScreen } from "@/components/auth/access-required-screen";
 import { isAccountApproved } from "@/lib/access";

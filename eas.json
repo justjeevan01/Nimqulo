@@ -12,18 +12,27 @@
       },
       "extends": "base",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://br-calm-frost-a1ndi9sf-api.compute.c-1.ap-southeast-1.aws.neon.tech/",
-        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_cmFwaWQtc3BvbmdlLTk5NzkuY2xlcmsuYWNjb3VudHMuZGV2JA"
+        "EXPO_PUBLIC_API_URL": "https://br-calm-frost-a1ndi9sf-api.compute.c-1.ap-southeast-1.aws.neon.tech/"
       }
     },
-    "preview": {
+    "release": {
       "distribution": "internal",
-      "environment": "preview",
+      "environment": "production",
       "android": {
         "buildType": "apk"
       },
       "extends": "base",
-      "env": { "APP_VARIANT": "pilot" }
+      "env": {
+        "APP_VARIANT": "pilot",
+        "EXPO_PUBLIC_API_URL": "https://br-square-feather-a14064tt-api.compute.c-1.ap-southeast-1.aws.neon.tech/"
+      }
+    },
+    "release-check": {
+      "extends": "release",
+      "developmentClient": false,
+      "env": {
+        "RELEASE_TEST_EMULATOR": "1"
+      }
     },
     "base": {}
   }

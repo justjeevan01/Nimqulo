@@ -13,7 +13,7 @@ type Props = {
   fontFamily?: string;
   fontScale: number;
   onProfile?: (person: Person) => void;
-  renderPhoto: (image: ImageProps["source"]) => ReactNode;
+  renderPhoto: (image: ImageProps["source"], imageId?:string) => ReactNode;
 };
 
 export function GroupMessage({ message, s, fontFamily, fontScale, onProfile, renderPhoto }: Props) {

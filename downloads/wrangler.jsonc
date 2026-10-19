@@ -1,0 +1,14 @@
+{
+  "$schema": "../realtime/node_modules/wrangler/config-schema.json",
+  "name": "nimqulo-downloads",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-19",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": {
+    "enabled": false
+  },
+  "vars": {
+    "APK_URL": "https://expo.dev/artifacts/eas/BHzYbcZJbZ8ioYM3iO4ZUIHHcNhGw70i-wMm1X-0Xq0.apk"
+  }
+}
