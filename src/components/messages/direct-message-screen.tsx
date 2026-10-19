@@ -5,7 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { randomUUID } from "expo-crypto";
 import { reconcileMessages } from "@/lib/message-reconciliation";
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Linking, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GroupMessage } from "./group-message";
 import { MessageBubble, MessageTime } from "./message-bubble";
@@ -35,6 +35,8 @@ export function DirectMessageScreen({ peer, initialMessages = [], history, initi
   const mounted = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot);
   const [storedMessages, setMessages] = useState<readonly DirectMessage[]>(initialMessages);
   const messages=useMemo(()=>reconcileMessages(history,storedMessages),[history,storedMessages]);
+  // The latest message is offset zero, including when history arrives asynchronously.
+  const newestFirst=useMemo(()=>[...messages].reverse(),[messages]);
   const [draft, setDraft] = useState(initialDraft);
   const [reply,setReply]=useState<MessageReply|undefined>(initialReply);
   const input=useRef<ComponentRef<typeof TextInput>>(null);
@@ -47,7 +49,7 @@ export function DirectMessageScreen({ peer, initialMessages = [], history, initi
   const sending = useRef(false);
   const pendingScroll = useRef(false);
   const scrollTimer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
-  const scrollSentMessage=useCallback(()=>{if(!pendingScroll.current)return;if(scrollTimer.current)clearTimeout(scrollTimer.current);scrollTimer.current=setTimeout(()=>{pendingScroll.current=false;list.current?.scrollToEnd({animated:true});},200);},[]);
+  const scrollSentMessage=useCallback(()=>{if(!pendingScroll.current)return;if(scrollTimer.current)clearTimeout(scrollTimer.current);scrollTimer.current=setTimeout(()=>{pendingScroll.current=false;list.current?.scrollToOffset({offset:0,animated:true});},200);},[]);
   useEffect(()=>()=>{if(scrollTimer.current)clearTimeout(scrollTimer.current);},[]);
   const historyMoving = useRef(false);
   const lastHistoryScroll = useRef(0);
@@ -83,13 +85,32 @@ export function DirectMessageScreen({ peer, initialMessages = [], history, initi
     setMessages(current => [...current, message]); onCache?.([...messages,message],""); setDraft("");setReply(undefined); setAttachment(undefined);
     void deliver(message);
   }
-  async function chooseAttachment() {
-    if (!onSend || sending.current) return;
+  const choosingAttachment=useRef(false);
+  function chooseAttachment(){
+    Alert.alert("Send photo", "Choose a photo source", [
+      {text:"Camera",onPress:()=>void pickAttachment("camera")},
+      {text:"Gallery",onPress:()=>void pickAttachment("gallery")},
+      {text:"Cancel",style:"cancel"},
+    ]);
+  }
+  async function pickAttachment(source:"camera"|"gallery") {
+    if (!onSend || sending.current || choosingAttachment.current) return;
+    choosingAttachment.current=true;
     setAttachmentError("");
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: .85 });
+      if(source==="camera"){
+        const permission=await ImagePicker.requestCameraPermissionsAsync();
+        if(!permission.granted){
+          if(permission.canAskAgain)setAttachmentError("Allow camera access to take a photo.");
+          else Alert.alert("Camera access", "Allow camera access in Android settings to take a photo.",[{text:"Cancel",style:"cancel"},{text:"Open settings",onPress:()=>void Linking.openSettings().catch(()=>setAttachmentError("Could not open settings."))}]);
+          return;
+        }
+      }
+      const options:ImagePicker.ImagePickerOptions={mediaTypes:["images"],quality:.85};
+      const result=source==="camera"?await ImagePicker.launchCameraAsync(options):await ImagePicker.launchImageLibraryAsync(options);
       if (!result.canceled) {if(attachment&&typeof attachment==="object"&&"uri" in attachment&&typeof attachment.uri==="string")discardChatPhoto(attachment.uri);setAttachment({ uri: await keepChatPhoto(result.assets[0].uri,randomUUID()) });}
-    } catch (cause) { setAttachmentError(cause instanceof Error?cause.message:"Couldn't open your photos. Please try again."); }
+    } catch (cause) { setAttachmentError(cause instanceof Error?cause.message:"Could not open the camera or gallery. Please try again."); }
+    finally{choosingAttachment.current=false;}
   }
   function renderPhoto(image: ImageProps["source"], imageId?:string) {
     return <SharedPhoto source={image} imageId={imageId} loadImage={loadImage} isScrolling={scrolling} onOpen={setViewedImage} s={s}/>;
@@ -108,7 +129,7 @@ export function DirectMessageScreen({ peer, initialMessages = [], history, initi
           <Pressable accessibilityRole="button" accessibilityLabel="Conversation options" onPress={() => { if(onOpenDetails)onOpenDetails();else setDetails(true); }} style={styles.iconButton}><Image source={moreIcon} style={{ width: 24 * s, height: 24 * s }} accessible={false} /></Pressable>
         </View>
       </View>
-      <FlatList ref={list} data={messages} keyExtractor={item => item.id} style={styles.history} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={[styles.messages, { paddingTop: 9 * s, paddingBottom: 8 * s, paddingLeft: 17 * s, paddingRight: 13 * s, gap: 5 * s }]}
+      <FlatList ref={list} data={newestFirst} inverted maintainVisibleContentPosition={{minIndexForVisible:0,autoscrollToTopThreshold:40}} keyExtractor={item => item.id} style={styles.history} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={[styles.messages, { paddingTop: 9 * s, paddingBottom: 8 * s, paddingLeft: 17 * s, paddingRight: 13 * s, gap: 5 * s }]}
         viewabilityConfig={viewability} onViewableItemsChanged={visibleMessages}
         onScrollBeginDrag={() => { historyMoving.current = true; cancelPhotoTap(); }}
         onScrollEndDrag={() => { historyMoving.current = false; cancelPhotoTap(); }}
@@ -116,16 +137,16 @@ export function DirectMessageScreen({ peer, initialMessages = [], history, initi
         onMomentumScrollEnd={() => { historyMoving.current = false; cancelPhotoTap(); }}
         onScroll={cancelPhotoTap} scrollEventThrottle={16}
         onContentSizeChange={scrollSentMessage} onLayout={scrollSentMessage}
-        ListHeaderComponent={onLoadEarlier?<Pressable accessibilityRole="button" disabled={loadingEarlier} onPress={onLoadEarlier} style={{minHeight:48,alignItems:"center",justifyContent:"center"}}><Text style={{color:"#99AED6",fontSize:14}}>{loadingEarlier?"Loading…":"Load earlier messages"}</Text></Pressable>:undefined}
+        ListFooterComponent={onLoadEarlier?<Pressable accessibilityRole="button" disabled={loadingEarlier} onPress={onLoadEarlier} style={{minHeight:48,alignItems:"center",justifyContent:"center"}}><Text style={{color:"#99AED6",fontSize:14}}>{loadingEarlier?"Loading…":"Load earlier messages"}</Text></Pressable>:undefined}
         renderItem={({ item,index }) => <View>
-          {!!chatDay(item.createdAt)&&chatDay(item.createdAt)!==chatDay(messages[index-1]?.createdAt)&&<View style={{alignItems:"center",paddingVertical:10*s}}><Text accessibilityRole="header" style={[styles.day,{fontFamily,fontSize:textSize(12),lineHeight:textLineHeight(17),color:"#A8BFE5",paddingHorizontal:13*s,paddingVertical:5*s,borderRadius:99}]}>{chatDateLabel(item.createdAt!)}</Text></View>}
+          {!!chatDay(item.createdAt)&&chatDay(item.createdAt)!==chatDay(newestFirst[index+1]?.createdAt)&&<View style={{alignItems:"center",paddingVertical:10*s}}><Text accessibilityRole="header" style={[styles.day,{fontFamily,fontSize:textSize(12),lineHeight:textLineHeight(17),color:"#A8BFE5",paddingHorizontal:13*s,paddingVertical:5*s,borderRadius:99}]}>{chatDateLabel(item.createdAt!)}</Text></View>}
           <SwipeToReply label={`${item.sender?.name||peer.name}: ${item.text}`} disabled={!onSend||!item.seq||item.system||item.deleted||item.pending||item.failed} isScrolling={scrolling} onReply={()=>chooseReply(item)}>
           {groupMode ? <GroupMessage message={item} s={s} fontFamily={fontFamily} fontScale={fontScale} renderPhoto={renderPhoto} onProfile={onViewMember}/> : <View style={{ alignItems: item.outgoing ? "flex-end" : "flex-start" }}>
           <MessageBubble message={item} s={s} fontFamily={fontFamily} fontScale={fontScale} renderPhoto={renderPhoto}/>
           <MessageTime time={item.pending?"Sending…":item.time} outgoing={item.outgoing} s={s} fontFamily={fontFamily} message={item}/>
         </View>}</SwipeToReply></View>}
         ListEmptyComponent={<View style={styles.empty}><Text style={{ fontFamily, fontSize: textSize(16), color: "#91A8D0" }}>No messages yet</Text></View>}
-        ListFooterComponent={failure ? <Pressable accessibilityRole="button" accessibilityLabel="Retry sending message" accessibilityState={{ disabled: busy || !onSend, busy }} disabled={busy || !onSend} onPress={() => void deliver(failure)} style={[styles.failure, { marginLeft: 16 * s, marginRight: 0, minHeight: 57 * s, borderRadius: 18 * s, paddingHorizontal: 16 * s, gap: 20 * s }]}>
+        ListHeaderComponent={failure ? <Pressable accessibilityRole="button" accessibilityLabel="Retry sending message" accessibilityState={{ disabled: busy || !onSend, busy }} disabled={busy || !onSend} onPress={() => void deliver(failure)} style={[styles.failure, { marginLeft: 16 * s, marginRight: 0, minHeight: 57 * s, borderRadius: 18 * s, paddingHorizontal: 16 * s, gap: 20 * s }]}>
           <View style={[styles.warning, { width: 22 * s, height: 22 * s }]}><Text style={{ fontFamily, fontSize: textSize(17), lineHeight: textLineHeight(21), color: "white", fontWeight: "600" }}>!</Text></View>
           <Text accessibilityLiveRegion="polite" style={{ flex: 1, fontFamily, fontSize: textSize(14), lineHeight: textLineHeight(20), letterSpacing: -.2 * s, color: "#FF4353" }}>{failure.failureReason||"This message failed to send."}{"\n"}Tap to retry</Text>
           <View style={[styles.retry, { width: 36 * s, height: 36 * s }]}>{busy ? <ActivityIndicator color="#FF4D5B" /> : <Image source={retryIcon} style={{ width: 24 * s, height: 24 * s }} accessible={false} />}</View>
@@ -153,7 +174,7 @@ const styles = StyleSheet.create({
   header: { borderBottomWidth: 1, borderColor: "#0F2136" }, headerRow: { flexDirection: "row", alignItems: "center" },
   iconButton: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   avatar: { borderRadius: 99, alignItems: "center", justifyContent: "center", backgroundColor: "#17304C" },
-  history: { flex: 1 }, messages: { flexGrow: 1, justifyContent: "flex-end" }, day: { backgroundColor: "#0B1829", borderWidth: 1, borderColor: "#12243A" },
+  history: { flex: 1 }, messages: { flexGrow: 1, justifyContent: "flex-start" }, day: { backgroundColor: "#0B1829", borderWidth: 1, borderColor: "#12243A" },
   bubble: { overflow: "hidden", borderWidth: 1 }, empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
   failure: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "#69212D", backgroundColor: "#24131E" }, warning: { borderRadius: 99, backgroundColor: "#FF3447", alignItems: "center", justifyContent: "center" }, retry: { borderRadius: 99, alignItems: "center", justifyContent: "center", backgroundColor: "#1A101F" },
   composer: { borderTopWidth: 1, borderColor: "#102237", backgroundColor: "#030D19" }, composerRow: { flexDirection: "row", alignItems: "flex-end" },

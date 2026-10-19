@@ -1,6 +1,6 @@
 export type Identity = { id: string; approved: boolean; sessionId?: string; sessionStarted?: number; avatarUrl?:string };
 export type PersonRecord = { id: string; name: string; username: string; connected: boolean; blocked: boolean; requested: boolean; avatar?:{uri:string} };
-export type GroupRecord = { id: string; name: string; members: { person: PersonRecord; role: "Owner" | "Admin" | "Member" }[]; added: boolean; myRole: "Owner" | "Admin" | "Member" };
+export type GroupRecord = { id: string; name: string; avatar?:{uri:string}; members: { person: PersonRecord; role: "Owner" | "Admin" | "Member" }[]; added: boolean; myRole: "Owner" | "Admin" | "Member" };
 export type ConversationRecord = { id: string; kind: "direct" | "group"; title: string; username?: string; peerId?: string; avatar?:{uri:string}; message: string; unread: number; updatedAt: string; nextSeq: number };
 export type MessageReply = { id:string; authorId:string; name:string; text:string; unavailable?:boolean };
 export type TypingActivity = { conversationId:string;userId:string;name:string;typing:boolean;expiresAt:number };

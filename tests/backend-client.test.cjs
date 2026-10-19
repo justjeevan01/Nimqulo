@@ -45,3 +45,17 @@ test("Firebase client binds requests to its login and sends photos without leaki
   assert.equal(requests[1].url,"https://api.test/conversations/chat/messages");
  }finally{global.fetch=originalFetch;if(originalUrl===undefined)delete process.env.EXPO_PUBLIC_API_URL;else process.env.EXPO_PUBLIC_API_URL=originalUrl;}
 });
+
+
+test("group photo saves submit an uploaded media ID and preserve unchanged photos",async()=>{
+ const originalFetch=global.fetch,originalUrl=process.env.EXPO_PUBLIC_API_URL;
+ process.env.EXPO_PUBLIC_API_URL="https://api.test";
+ try{
+  const {createBackend}=await import("../src/lib/backend.ts");const api=createBackend(async()=>"token");
+  const requests=[];global.fetch=async(url,init)=>{requests.push({url,body:JSON.parse(init.body)});return Response.json({id:"group"});};
+  await api.saveGroup("Group",[],undefined,"photo");
+  await api.saveGroup("Renamed",[],"group");
+  await api.saveGroup("Renamed",[],"group","updated-photo");
+  assert.deepEqual(requests,[{url:"https://api.test/groups",body:{name:"Group",invitees:[],mediaId:"photo"}},{url:"https://api.test/groups/group",body:{name:"Renamed",invitees:[]}},{url:"https://api.test/groups/group",body:{name:"Renamed",invitees:[],mediaId:"updated-photo"}}]);
+ }finally{global.fetch=originalFetch;if(originalUrl===undefined)delete process.env.EXPO_PUBLIC_API_URL;else process.env.EXPO_PUBLIC_API_URL=originalUrl;}
+});

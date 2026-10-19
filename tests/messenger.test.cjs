@@ -134,6 +134,31 @@ test("messenger transactions enforce authorization and lifecycle rules on Postgr
       assert.equal(results.filter(r=>r.status==="fulfilled").length,1);
       assert.equal((await store.snapshot(bob)).groups.find(g=>g.id===group).members.length,2);
     });
+    await t.test("group photos persist for members and require administrator and upload ownership",async()=>{
+      const imageId=randomUUID(),otherImageId=randomUUID();
+      const key=`group-photo/${imageId}`,otherKey=`group-photo/${otherImageId}`;
+      objects.set(key,Buffer.from("photo"));objects.set(otherKey,Buffer.from("other"));
+      await pool.query("INSERT INTO nimqulo_media(id,owner_id,object_key,content_type,size) VALUES($1,$2,$3,'image/png',5),($4,$5,$6,'image/png',5)",[imageId,alice,key,otherImageId,bob,otherKey]);
+      await assert.rejects(store.saveGroup(bob,"Unauthorized",[],group,otherImageId),{status:403});
+      await assert.rejects(store.saveGroup(alice,"Wrong upload",[],group,otherImageId),{status:404});
+      await assert.rejects(store.saveGroup(alice,"Bad upload",[],group,"https://untrusted.test/photo"),{status:400});
+      await store.saveGroup(alice,"QA Group",[],group,imageId);
+      const avatar={uri:`https://private.test/${key}`};
+      for(const user of [alice,bob]){
+        const snapshot=await store.snapshot(user);
+        assert.deepEqual(snapshot.groups.find(g=>g.id===group).avatar,avatar);
+        assert.deepEqual(snapshot.conversations.find(c=>c.id===group).avatar,avatar);
+      }
+      assert.equal((await store.snapshot(eve)).groups.some(g=>g.id===group),false,"an invitation does not grant private group access");
+      await store.saveGroup(alice,"QA Group",[],group);
+      assert.deepEqual((await store.snapshot(bob)).groups.find(g=>g.id===group).avatar,avatar,"name-only edits preserve the photo");
+      const created=await store.saveGroup(alice,"Photo on creation",[],undefined,imageId);
+      assert.deepEqual((await store.snapshot(alice)).groups.find(g=>g.id===created.id).avatar,avatar);
+      await pool.query("DELETE FROM nimqulo_media WHERE id=$1",[imageId]);
+      assert.equal((await store.snapshot(alice)).groups.find(g=>g.id===group).avatar,undefined,"deleted photos fall back safely");
+      await pool.query("DELETE FROM nimqulo_media WHERE id=$1",[otherImageId]);
+      objects.delete(key);objects.delete(otherKey);
+    });
     await t.test("history is restricted to the current membership period",async()=>{
       await store.send(alice,group,"Before joining",randomUUID());
       const invitation=(await store.snapshot(eve)).invitations.find(i=>i.name==="QA Group");
