@@ -1,7 +1,9 @@
 import { DarkTheme, ThemeProvider } from "expo-router";
 import { NativeTabs } from "expo-router/native-tabs";
+import { useMessenger } from "@/state/messenger";
 
 export function AppTabs() {
+  const {peopleActivity}=useMessenger();
   return <ThemeProvider value={DarkTheme}>
     <NativeTabs backBehavior="initialRoute" backgroundColor="#04101E" tintColor="#0873FF"
       iconColor={{ default: "#99ADD5", selected: "#0873FF" }}
@@ -14,6 +16,7 @@ export function AppTabs() {
       <NativeTabs.Trigger name="people" accessibilityLabel="People" contentStyle={{ backgroundColor: "#020B18" }} disableAutomaticContentInsets>
         <NativeTabs.Trigger.Icon sf={{ default: "person", selected: "person.fill" }} md="person" />
         <NativeTabs.Trigger.Label>People</NativeTabs.Trigger.Label>
+        {peopleActivity.total>0&&<NativeTabs.Trigger.Badge>{peopleActivity.total>99?"99+":String(peopleActivity.total)}</NativeTabs.Trigger.Badge>}
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings" accessibilityLabel="Settings" contentStyle={{ backgroundColor: "#020B18" }} disableAutomaticContentInsets>
         <NativeTabs.Trigger.Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} md="settings" />

@@ -7,6 +7,7 @@ import { ApiError, setAccessFailureHandler, type Snapshot } from "@/lib/backend"
 import { router, usePathname } from "expo-router";
 import { observeMessageNotifications } from "@/lib/notifications";
 import { applyTypingActivity, type TypingActivity } from "@/lib/typing";
+import { pendingPeopleActivity } from "@/lib/people-activity";
 const empty:Snapshot={people:[],requests:[],groups:[],invitations:[],blocked:[],conversations:[],operator:false};
 function useMessengerState(){
   const api=useBackend();const {user}=useUser();const userId=user!.id;
@@ -49,7 +50,7 @@ function useMessengerState(){
   },[api,refresh,userId]);
   const perform=useCallback(async<T,>(action:()=>Promise<T>)=>{try{const result=await action();await refresh();return result;}catch(cause){if(alive.current)setError(cause instanceof Error?cause.message:"Could not complete this action.");throw cause;}},[refresh]);
   const retry=()=>notificationTarget.current?openNotification(notificationTarget.current):refresh();
-  return {api,userId,snapshot,ready,error,revision,refresh,retry,perform,typing};
+  return {api,userId,snapshot,ready,error,revision,refresh,retry,perform,typing,peopleActivity:pendingPeopleActivity(snapshot)};
 }
 const Context=createContext<ReturnType<typeof useMessengerState>|null>(null);
 export function MessengerProvider({children}:PropsWithChildren){const state=useMessengerState();return <Context value={state}>{children}{!!state.error&&<View style={{backgroundColor:"#2A1720",paddingHorizontal:16,paddingVertical:12}}><Text accessibilityRole="alert" style={{fontSize:14,color:"#FFB4BC"}}>{state.error}</Text><Pressable accessibilityRole="button" onPress={()=>void state.retry()} style={{minHeight:48,justifyContent:"center"}}><Text style={{fontSize:16,color:"white"}}>Retry</Text></Pressable></View>}</Context>;}

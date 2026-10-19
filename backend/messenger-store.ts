@@ -89,10 +89,12 @@ export class MessengerStore {
   }
   async lookup(user: string, username: string) {
     await this.account(this.pool,user);
-    if (!/^[a-z0-9_]{3,24}$/.test(username.toLowerCase())) return [];
+    const query=username.trim().replace(/^@/,"").toLowerCase();
+    if (!/^[a-z0-9_]{1,24}$/.test(query)) return [];
     const { rows } = await this.pool.query(`SELECT p.*,a.avatar_url,a.avatar_key FROM nimqulo_profiles p JOIN nimqulo_accounts a USING(user_id)
-      WHERE p.username=$1 AND p.user_id<>$2 AND a.approved AND a.status='active'
-      AND NOT EXISTS(SELECT 1 FROM nimqulo_blocks b WHERE (b.owner_id=$2 AND b.target_id=p.user_id) OR (b.target_id=$2 AND b.owner_id=p.user_id))`, [username.toLowerCase(),user]);
+      WHERE strpos(p.username,$1)=1 AND p.user_id<>$2 AND a.approved AND a.status='active'
+      AND NOT EXISTS(SELECT 1 FROM nimqulo_blocks b WHERE (b.owner_id=$2 AND b.target_id=p.user_id) OR (b.target_id=$2 AND b.owner_id=p.user_id))
+      ORDER BY (p.username=$1) DESC,p.username LIMIT 20`, [query,user]);
     return Promise.all(rows.map(row=>this.person(row)));
   }
   async requestConnection(user: string, target: string) {

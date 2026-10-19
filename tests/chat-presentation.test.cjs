@@ -14,3 +14,13 @@ test('reply gestures reject scrolling, diagonals, short drags and cancelled swip
  assert.equal(shouldFinishReply(60,3,false),true);
  for(const [dx,dy,cancelled]of [[30,0,false],[70,30,false],[70,0,true]])assert.equal(shouldFinishReply(dx,dy,cancelled),false);
 });
+
+
+test('People badges count incoming requests and pending invitations, and clear after decisions',async()=>{
+ const {pendingPeopleActivity}=await import('../src/lib/people-activity.ts');
+ const snapshot={requests:[{id:'incoming',direction:'incoming'},{id:'outgoing',direction:'outgoing'}],invitations:[{id:'pending',status:'pending'},{id:'accepted',status:'accepted'},{id:'declined',status:'declined'}]};
+ assert.deepEqual(pendingPeopleActivity(snapshot),{requests:1,invitations:1,total:2});
+ snapshot.requests=snapshot.requests.filter(request=>request.id!=='incoming');
+ snapshot.invitations[0].status='accepted';
+ assert.deepEqual(pendingPeopleActivity(snapshot),{requests:0,invitations:0,total:0});
+});
